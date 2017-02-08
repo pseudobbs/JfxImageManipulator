@@ -52,7 +52,7 @@ public class MyImage extends WritableImage
 				{
 					for (int j = -1 * w; j <= 1 * w; j++)
 					{
-						if (this.doesPixelExist(x + i, y + j))
+						if (this.pixelExists(x + i, y + j))
 						{
 							// get color of the pixel 'w' pixels away in any
 							// direction
@@ -111,7 +111,7 @@ public class MyImage extends WritableImage
 	}
 
 
-	private boolean doesPixelExist(int x, int y)
+	private boolean pixelExists(int x, int y)
 	{
 		return (x < this.getWidth() && x >= 0) && (y < this.getHeight() && y >= 0);
 	}

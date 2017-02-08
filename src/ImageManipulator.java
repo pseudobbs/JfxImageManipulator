@@ -3,6 +3,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.imageio.ImageIO;
 
@@ -30,7 +32,6 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-// TODO: loggerr
 public class ImageManipulator extends Application
 {
 	// helpful things to keep track of
@@ -255,7 +256,7 @@ public class ImageManipulator extends Application
 		catch (FileNotFoundException | NullPointerException e)
 		{
 			actionStatus.setText("File selection cancelled");
-			System.err.println("[INFO] User cancelled file selection");
+			Logger.getGlobal().log(Level.INFO, "User cancelled file selection");
 		}
 
 		if (selectedImage != null)
@@ -299,7 +300,7 @@ public class ImageManipulator extends Application
 
 
 	/**
-	 * Displays an image in the right panel
+	 * Displays an image in the center panel
 	 * 
 	 * @param image
 	 *            the image to display
@@ -348,7 +349,7 @@ public class ImageManipulator extends Application
 		}
 		catch (IOException | IllegalArgumentException e)
 		{
-			System.err.println("[INFO] Image not saved");
+			Logger.getGlobal().log(Level.WARNING, "Image not saved");
 		}
 	}
 
