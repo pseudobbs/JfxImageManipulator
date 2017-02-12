@@ -3,16 +3,18 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.imageio.ImageIO;
 
 import javafx.application.Application;
-import javafx.beans.Observable;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
-import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -20,7 +22,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.image.WritableImage;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
@@ -53,10 +54,6 @@ public class ImageManipulator extends Application
 	private VBox savePanel;
 	private HBox titleBar;
 
-	// window dimensions
-	private static double windowWidth;
-	private static double windowHeight;
-
 
 	public static void main(String[] args)
 	{
@@ -87,7 +84,7 @@ public class ImageManipulator extends Application
 
 		// add elements to window
 		root = new FlowPane();
-		scene = new Scene(root, 600, 500);
+		scene = new Scene(root, 400, 300);
 		root.getChildren().add(border);
 
 		// force BorderPane to fit window size
@@ -99,15 +96,6 @@ public class ImageManipulator extends Application
 		primaryStage.setX(0);
 		primaryStage.setY(0);
 		primaryStage.show();
-
-		// save window dimensions for dynamic resizing
-		windowWidth = primaryStage.getWidth() - scene.getWidth() + 1;
-		windowHeight = primaryStage.getHeight() - scene.getHeight() + 1;
-
-		// adds listeners to resize the window when the size of it's content
-		// changes
-		imagePanel.widthProperty().addListener((observable) -> resize(observable));
-		imagePanel.heightProperty().addListener((observable) -> resize(observable));
 	}
 
 
@@ -145,21 +133,24 @@ public class ImageManipulator extends Application
 		vbox.setPadding(new Insets(10));
 		vbox.setSpacing(8);
 
-		// buttons for image controls
-		Button invertColorsButton = new Button("Invert colors");
-		invertColorsButton.setOnAction((event) -> invertColors());
+		// get methods of image class
+		Method[] manipulations = MyImage.class.getDeclaredMethods();
 
-		Button blurButton = new Button("Blur");
-		blurButton.setOnAction((event) -> blur(event));
+		// create buttons for each manipulation method
+		for (Method method : manipulations)
+		{
+			// don't need buttons for private methods
+			if (!Modifier.isPublic(method.getModifiers()))
+			{
+				continue;
+			}
 
-		// TODO: add actions for these buttons
-		Button grayScaleButton = new Button("Gray scale");
-		Button whiteOutButton = new Button("White out");
-		Button blackOutButton = new Button("Black out");
+			//
+			Button button = new Button(capitalize(method.getName()));
+			button.setOnAction((event) -> manipulateImage(method));
 
-		// add the button to the box
-		vbox.getChildren().addAll(invertColorsButton, blurButton, grayScaleButton, whiteOutButton,
-				blackOutButton);
+			vbox.getChildren().add(button);
+		}
 
 		vbox.setAlignment(Pos.CENTER);
 
@@ -195,7 +186,6 @@ public class ImageManipulator extends Application
 	private VBox imagePanel()
 	{
 		VBox vbox = new VBox();
-		vbox.setPadding(new Insets(30));
 		vbox.setAlignment(Pos.CENTER);
 
 		return vbox;
@@ -211,7 +201,7 @@ public class ImageManipulator extends Application
 	private VBox savePanel()
 	{
 		VBox vbox = new VBox();
-		vbox.setPadding(new Insets(30));
+		vbox.setPadding(new Insets(15));
 		vbox.setSpacing(15);
 		vbox.setAlignment(Pos.CENTER);
 
@@ -259,41 +249,50 @@ public class ImageManipulator extends Application
 			Logger.getGlobal().log(Level.INFO, "User cancelled file selection");
 		}
 
-		if (selectedImage != null)
+		// keep a copy of the original for revert changes function
+		uploadedImage = selectedImage;
+
+		if (imageOnScreen != null)
 		{
-			// keep a copy of the original for revert changes function
-			uploadedImage = selectedImage;
-			showImage(selectedImage);
+			double deltaX = selectedImage.getWidth() - imageOnScreen.getWidth();
+			double deltaY = selectedImage.getHeight() - imageOnScreen.getHeight();
+
+			resize(deltaX, deltaY);
 		}
+		else
+		{
+			resize(selectedImage.getWidth(), selectedImage.getHeight());
+		}
+
+		showImage(selectedImage);
+
 	}
 
 
-	/**
-	 * Inverts the colors of an image on the screen
-	 */
-	private void invertColors()
-	{
-		WritableImage imageToWrite = new WritableImage((int) imageOnScreen.getWidth(),
-				(int) imageOnScreen.getHeight());
-
-		for (int y = 0; y < imageToWrite.getHeight(); y++)
-		{
-			for (int x = 0; x < imageToWrite.getWidth(); x++)
-			{
-				imageToWrite.getPixelWriter().setColor(x, y,
-						imageOnScreen.getPixelReader().getColor(x, y).invert());
-			}
-		}
-
-		showImage(imageToWrite);
-	}
-
-
-	private void blur(ActionEvent event)
+	private void manipulateImage(Method manipulation)
 	{
 		MyImage imageToWrite = new MyImage(imageOnScreen);
 
-		imageToWrite.blur(2);
+		try
+		{
+			int w = 2;
+
+			Parameter[] parameters = manipulation.getParameters();
+
+			if (parameters.length == 0)
+			{
+				manipulation.invoke(imageToWrite);
+			}
+			else
+			{
+				manipulation.invoke(imageToWrite, w);
+			}
+		}
+		catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
+		{
+			Logger.getLogger(ImageManipulator.class.getName()).log(Level.SEVERE,
+					"Problem executing method " + manipulation.getName(), e);
+		}
 
 		showImage(imageToWrite);
 	}
@@ -357,39 +356,17 @@ public class ImageManipulator extends Application
 	/**
 	 * Listener function to dynamically resize the window to fit the content
 	 * 
-	 * @param o
-	 *            the Observable that is being listened to
 	 * 
-	 *            TODO: "o" may not be needed since we don't actually use it.
-	 *            come back and double check after you get to where we can load
-	 *            a different image and resize smaller (toggle basically)
+	 * TODO: "o" may not be needed since we don't actually use it. come back and
+	 * double check after you get to where we can load a different image and
+	 * resize smaller (toggle basically)
 	 * 
-	 *            TODO: handle if the image is bigger than the screen
-	 *            (scrollbars)
-	 * 
-	 *            TODO: this resizes the window to be larger, but can't handle
-	 *            resizing smaller
+	 * TODO: handle if the image is bigger than the screen (scrollbars)
 	 */
-	private void resize(Observable o)
+	private void resize(double deltaX, double deltaY)
 	{
-		double currWidth = titleBar.getWidth();
-		double currHeight = titleBar.getHeight() + imagePanel.getHeight();
-
-		// more accurate than imagePanel.getWidth()/Height
-		Bounds bounds = imagePanel.getLayoutBounds();
-
-		if (bounds.getWidth() + windowWidth > primaryStage.getWidth())
-		{
-			primaryStage.setWidth(currWidth + 1);
-		}
-
-		if (bounds.getHeight() + windowHeight > primaryStage.getHeight())
-		{
-			primaryStage.setHeight(currHeight + 1);
-		}
-
-		windowWidth = primaryStage.getWidth() - scene.getWidth() + 1;
-		windowHeight = primaryStage.getHeight() - scene.getHeight() + 1;
+		primaryStage.setWidth(primaryStage.getWidth() + deltaX);
+		primaryStage.setHeight(primaryStage.getHeight() + deltaY);
 	}
 
 
@@ -404,5 +381,19 @@ public class ImageManipulator extends Application
 		border.setLeft(null);
 		border.setCenter(filePanel);
 		border.setRight(null);
+	}
+
+
+	/**
+	 * capitalizes the first letter of a string
+	 * 
+	 * @param s
+	 *            the string to capitalize
+	 * 
+	 * @return the capitalized string
+	 */
+	private String capitalize(String s)
+	{
+		return s.substring(0, 1).toUpperCase() + s.substring(1);
 	}
 }

@@ -1,7 +1,10 @@
+import java.util.Arrays;
+
 import javafx.scene.image.Image;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 
+// TODO: add double constructor and stop casting on instantiation
 public class MyImage extends WritableImage
 {
 
@@ -46,8 +49,7 @@ public class MyImage extends WritableImage
 				float power = 0;
 
 				// loop around 'w' pixels from the current pixel and average a
-				// blurred value from all of those values (higher 'w' means more
-				// blur)
+				// value from all of those values
 				for (int i = -1 * w; i <= 1 * w; i++)
 				{
 					for (int j = -1 * w; j <= 1 * w; j++)
@@ -71,18 +73,18 @@ public class MyImage extends WritableImage
 				}
 
 				// rgb values of the blurred pixel
-				sumR /= power;
-				sumG /= power;
-				sumB /= power;
+				sumR = clamp(Math.abs(sumR / power));
+				sumG = clamp(Math.abs(sumG / power));
+				sumB = clamp(Math.abs(sumB / power));
 
 				// keeps track of what the color for each pixel in the new image
-				// should be so we don't sample off of the same pixels we're
-				// blurring
+				// should be so we don't modify the same pixels we're reading
+				// from
 				newColors[y][x] = new Color(sumR, sumG, sumB, 1.0f);
 			}
 		}
 
-		// sets the color of the new images pixels to the blurred values
+		// sets the color of the new images pixels to the new values
 		for (int y = 0; y < this.getHeight(); y++)
 		{
 			for (int x = 0; x < this.getWidth(); x++)
@@ -95,25 +97,55 @@ public class MyImage extends WritableImage
 
 	public void blur(int w)
 	{
+		// int w = 2;
 
 		float[][] blurKernel = new float[2 * w + 1][2 * w + 1];
 
-		for (int y = 0; y < 2 * w + 1; y++)
+		for (float[] row : blurKernel)
 		{
-			for (int x = 0; x < 2 * w + 1; x++)
-			{
-				blurKernel[y][x] = 1;
-			}
+			Arrays.fill(row, 1.0f);
 		}
 
 		this.applyKernel(blurKernel, w);
+	}
 
+
+	public void sharpen()
+	{
+		int w = 1; /// 3x3 kernel
+		float[][] sharpenKernel = new float[2 * w + 1][2 * w + 1];
+
+		sharpenKernel[w][w] = 5;
+		sharpenKernel[w][0] = -1;
+		sharpenKernel[0][w] = -1;
+		sharpenKernel[w][2] = -1;
+		sharpenKernel[2][w] = -1;
+
+		this.applyKernel(sharpenKernel, w);
+	}
+
+
+	public void invert()
+	{
+		for (int y = 0; y < this.getHeight(); y++)
+		{
+			for (int x = 0; x < this.getWidth(); x++)
+			{
+				this.getPixelWriter().setColor(x, y, this.getPixelReader().getColor(x, y).invert());
+			}
+		}
 	}
 
 
 	private boolean pixelExists(int x, int y)
 	{
 		return (x < this.getWidth() && x >= 0) && (y < this.getHeight() && y >= 0);
+	}
+
+
+	private float clamp(float f)
+	{
+		return f > 1 ? 1.0f : f;
 	}
 
 }
