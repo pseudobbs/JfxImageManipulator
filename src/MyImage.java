@@ -73,9 +73,9 @@ public class MyImage extends WritableImage
 				}
 
 				// rgb values of the blurred pixel
-				sumR = clamp(Math.abs(sumR / power));
-				sumG = clamp(Math.abs(sumG / power));
-				sumB = clamp(Math.abs(sumB / power));
+				sumR = clamp((sumR / power));
+				sumG = clamp((sumG / power));
+				sumB = clamp((sumB / power));
 
 				// keeps track of what the color for each pixel in the new image
 				// should be so we don't modify the same pixels we're reading
@@ -137,6 +137,23 @@ public class MyImage extends WritableImage
 	}
 
 
+	public void edge_detection()
+	{
+		int w = 1;
+
+		float[][] edgeKernel = new float[2 * w + 1][2 * w + 1];
+
+		for (float[] row : edgeKernel)
+		{
+			Arrays.fill(row, -1.0f);
+		}
+
+		edgeKernel[w][w] = 8.0f;
+
+		this.applyKernel(edgeKernel, w);
+	}
+
+
 	private boolean pixelExists(int x, int y)
 	{
 		return (x < this.getWidth() && x >= 0) && (y < this.getHeight() && y >= 0);
@@ -145,7 +162,7 @@ public class MyImage extends WritableImage
 
 	private float clamp(float f)
 	{
-		return f > 1 ? 1.0f : f;
+		return f > 1 ? 1 : f < 0 ? 0 : f;
 	}
 
 }

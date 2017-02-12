@@ -7,6 +7,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
+import java.util.Stack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -53,6 +54,10 @@ public class ImageManipulator extends Application
 	private VBox filePanel;
 	private VBox savePanel;
 	private HBox titleBar;
+
+	// for undo/redo
+	private Stack<Image> undoStack = new Stack<>();
+	private Stack<Image> redoStack = new Stack<>();
 
 
 	public static void main(String[] args)
@@ -109,6 +114,7 @@ public class ImageManipulator extends Application
 		// horizontal box for a title
 		HBox hbox = new HBox();
 		hbox.setPadding(new Insets(15, 12, 15, 12));
+		hbox.setAlignment(Pos.CENTER);
 		hbox.setStyle("-fx-background-color: #336699;");
 
 		// title bar
@@ -145,7 +151,7 @@ public class ImageManipulator extends Application
 				continue;
 			}
 
-			//
+			// create button for each of MyImage's manipulation methods
 			Button button = new Button(capitalize(method.getName()));
 			button.setOnAction((event) -> manipulateImage(method));
 
@@ -205,16 +211,28 @@ public class ImageManipulator extends Application
 		vbox.setSpacing(15);
 		vbox.setAlignment(Pos.CENTER);
 
+		HBox hbox = new HBox();
+		hbox.setPadding(new Insets(15));
+		hbox.setSpacing(15);
+		hbox.setAlignment(Pos.CENTER);
+
+		Button undoButton = new Button("Undo");
+		undoButton.setOnAction((event) -> undo());
+
+		Button redoButton = new Button("Redo");
+		redoButton.setOnAction((event) -> redo());
+
 		Button saveButton = new Button("Save image");
 		saveButton.setOnAction((event) -> saveImage());
 
 		Button discardButton = new Button("Discard image");
-		discardButton.setOnAction((event) -> reset(event));
+		discardButton.setOnAction((event) -> reset());
 
 		Button revertButton = new Button("Revert changes");
-		revertButton.setOnAction((event) -> revert(event));
+		revertButton.setOnAction((event) -> revert());
 
-		vbox.getChildren().addAll(saveButton, discardButton, revertButton);
+		hbox.getChildren().addAll(undoButton, redoButton);
+		vbox.getChildren().addAll(hbox, saveButton, discardButton, revertButton);
 
 		return vbox;
 	}
@@ -252,6 +270,9 @@ public class ImageManipulator extends Application
 		// keep a copy of the original for revert changes function
 		uploadedImage = selectedImage;
 
+		// clears the stack if there is garbage from a previous image in it
+		undoStack.removeAllElements();
+
 		if (imageOnScreen != null)
 		{
 			double deltaX = selectedImage.getWidth() - imageOnScreen.getWidth();
@@ -264,7 +285,7 @@ public class ImageManipulator extends Application
 			resize(selectedImage.getWidth(), selectedImage.getHeight());
 		}
 
-		showImage(selectedImage);
+		showImage(selectedImage, true);
 
 	}
 
@@ -294,7 +315,7 @@ public class ImageManipulator extends Application
 					"Problem executing method " + manipulation.getName(), e);
 		}
 
-		showImage(imageToWrite);
+		showImage(imageToWrite, true);
 	}
 
 
@@ -304,7 +325,7 @@ public class ImageManipulator extends Application
 	 * @param image
 	 *            the image to display
 	 */
-	private void showImage(Image image)
+	private void showImage(Image image, boolean addToStack)
 	{
 		ImageView imageView = new ImageView(image);
 
@@ -320,6 +341,10 @@ public class ImageManipulator extends Application
 		border.setCenter(imagePanel);
 		border.setLeft(controlPanel);
 		border.setRight(savePanel);
+
+		// keep track for undo
+		if (addToStack)
+			undoStack.push(image);
 
 		// keep track of what image is currently displaying
 		imageOnScreen = image;
@@ -354,12 +379,35 @@ public class ImageManipulator extends Application
 
 
 	/**
+	 * Removes the current edit from the screen and displays the last edit the
+	 * user made
+	 */
+	private void undo()
+	{
+		// don't undo if all that's there is the original image
+		if (undoStack.size() > 1)
+		{
+			redoStack.push(undoStack.pop());
+			showImage(undoStack.peek(), false);
+		}
+	}
+
+
+	/**
+	 * Redisplays the last thing undone by the user
+	 */
+	private void redo()
+	{
+		if (!redoStack.isEmpty())
+		{
+			showImage(redoStack.pop(), true);
+		}
+	}
+
+
+	/**
 	 * Listener function to dynamically resize the window to fit the content
 	 * 
-	 * 
-	 * TODO: "o" may not be needed since we don't actually use it. come back and
-	 * double check after you get to where we can load a different image and
-	 * resize smaller (toggle basically)
 	 * 
 	 * TODO: handle if the image is bigger than the screen (scrollbars)
 	 */
@@ -370,13 +418,20 @@ public class ImageManipulator extends Application
 	}
 
 
-	private void revert(ActionEvent event)
+	/**
+	 * Reverts all changes by displaying the original selected image
+	 */
+	private void revert()
 	{
-		showImage(uploadedImage);
+		showImage(uploadedImage, true);
 	}
 
 
-	private void reset(ActionEvent event)
+	/**
+	 * Resets the window to its initial on-load state
+	 * 
+	 */
+	private void reset()
 	{
 		border.setLeft(null);
 		border.setCenter(filePanel);
@@ -394,6 +449,6 @@ public class ImageManipulator extends Application
 	 */
 	private String capitalize(String s)
 	{
-		return s.substring(0, 1).toUpperCase() + s.substring(1);
+		return (s.substring(0, 1).toUpperCase() + s.substring(1)).replaceAll("_", " ");
 	}
 }
