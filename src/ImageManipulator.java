@@ -18,9 +18,11 @@ import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Slider;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
@@ -54,10 +56,13 @@ public class ImageManipulator extends Application
 	private VBox filePanel;
 	private VBox savePanel;
 	private HBox titleBar;
+	private Slider slider;
 
 	// for undo/redo
 	private Stack<Image> undoStack = new Stack<>();
 	private Stack<Image> redoStack = new Stack<>();
+	private Button undoButton;
+	private Button redoButton;
 
 
 	public static void main(String[] args)
@@ -101,6 +106,7 @@ public class ImageManipulator extends Application
 		primaryStage.setX(0);
 		primaryStage.setY(0);
 		primaryStage.show();
+
 	}
 
 
@@ -131,7 +137,13 @@ public class ImageManipulator extends Application
 	}
 
 
-	// Rotate Enlarge Shrink Grayscale Exit
+	/**
+	 * Uses reflection to find the public methods of the MyImage class, then
+	 * creates a button for each method so the user can acess that method.
+	 * 
+	 * @return a control panel with buttons for each manipulation method in
+	 *         class MyImage
+	 */
 	private VBox controlPanel()
 	{
 		// create a vertical box
@@ -153,8 +165,9 @@ public class ImageManipulator extends Application
 
 			// create button for each of MyImage's manipulation methods
 			Button button = new Button(capitalize(method.getName()));
+			button.setPrefWidth(125);
+			button.setId(method.getName());
 			button.setOnAction((event) -> manipulateImage(method));
-
 			vbox.getChildren().add(button);
 		}
 
@@ -216,10 +229,10 @@ public class ImageManipulator extends Application
 		hbox.setSpacing(15);
 		hbox.setAlignment(Pos.CENTER);
 
-		Button undoButton = new Button("Undo");
+		undoButton = new Button("Undo");
 		undoButton.setOnAction((event) -> undo());
 
-		Button redoButton = new Button("Redo");
+		redoButton = new Button("Redo");
 		redoButton.setOnAction((event) -> redo());
 
 		Button saveButton = new Button("Save image");
@@ -271,8 +284,12 @@ public class ImageManipulator extends Application
 		uploadedImage = selectedImage;
 
 		// clears the stack if there is garbage from a previous image in it
-		undoStack.removeAllElements();
+		// TODO: is this desirable? this prevents undoing back to a previous
+		// image
+		undoStack.clear();
+		redoStack.clear();
 
+		// resize window based on image size
 		if (imageOnScreen != null)
 		{
 			double deltaX = selectedImage.getWidth() - imageOnScreen.getWidth();
@@ -285,28 +302,43 @@ public class ImageManipulator extends Application
 			resize(selectedImage.getWidth(), selectedImage.getHeight());
 		}
 
-		showImage(selectedImage, true);
+		showImage(selectedImage);
 
 	}
 
 
+	/**
+	 * Calls the method passed in from the button handlers in the control panel.
+	 * If the method requires a parameter, present the user with a slider to
+	 * choose the parameter.
+	 * 
+	 * @param manipulation
+	 *            the method to invoke on the image
+	 */
+	// TODO: would it look better to move some of the else block outside the
+	// try?
 	private void manipulateImage(Method manipulation)
 	{
 		MyImage imageToWrite = new MyImage(imageOnScreen);
 
 		try
 		{
-			int w = 2;
-
 			Parameter[] parameters = manipulation.getParameters();
 
 			if (parameters.length == 0)
 			{
 				manipulation.invoke(imageToWrite);
+				redoStack.clear();
+				showImage(imageToWrite);
 			}
 			else
 			{
-				manipulation.invoke(imageToWrite, w);
+				slider.setPrefHeight(new Slider().getHeight());
+				slider.setVisible(true);
+
+				// listen for user input
+				slider.valueProperty().addListener(
+						(ov, old, newV) -> invokeWithValue(newV, manipulation, imageToWrite));
 			}
 		}
 		catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
@@ -315,7 +347,6 @@ public class ImageManipulator extends Application
 					"Problem executing method " + manipulation.getName(), e);
 		}
 
-		showImage(imageToWrite, true);
 	}
 
 
@@ -325,7 +356,7 @@ public class ImageManipulator extends Application
 	 * @param image
 	 *            the image to display
 	 */
-	private void showImage(Image image, boolean addToStack)
+	private void showImage(Image image)
 	{
 		ImageView imageView = new ImageView(image);
 
@@ -336,15 +367,17 @@ public class ImageManipulator extends Application
 		// clear out previous image in the image panel and add a new one
 		imagePanel.getChildren().clear();
 		imagePanel.getChildren().add(imageView);
+		imagePanel.getChildren().add(makeCustomSlider());
 
 		// set correct panels for user
 		border.setCenter(imagePanel);
 		border.setLeft(controlPanel);
 		border.setRight(savePanel);
 
-		// keep track for undo
-		if (addToStack)
-			undoStack.push(image);
+		undoStack.push(image);
+
+		undoButton.setDisable(undoStack.size() == 1);
+		redoButton.setDisable(redoStack.isEmpty());
 
 		// keep track of what image is currently displaying
 		imageOnScreen = image;
@@ -373,7 +406,8 @@ public class ImageManipulator extends Application
 		}
 		catch (IOException | IllegalArgumentException e)
 		{
-			Logger.getGlobal().log(Level.WARNING, "Image not saved");
+			Logger.getLogger(ImageManipulator.class.getName()).log(Level.WARNING, "Image not saved",
+					e);
 		}
 	}
 
@@ -381,26 +415,28 @@ public class ImageManipulator extends Application
 	/**
 	 * Removes the current edit from the screen and displays the last edit the
 	 * user made
+	 * 
 	 */
 	private void undo()
 	{
 		// don't undo if all that's there is the original image
-		if (undoStack.size() > 1)
+		if (undoStack.size() > 0)
 		{
 			redoStack.push(undoStack.pop());
-			showImage(undoStack.peek(), false);
+			showImage(undoStack.pop());
 		}
 	}
 
 
 	/**
 	 * Redisplays the last thing undone by the user
+	 * 
 	 */
 	private void redo()
 	{
 		if (!redoStack.isEmpty())
 		{
-			showImage(redoStack.pop(), true);
+			showImage(redoStack.pop());
 		}
 	}
 
@@ -408,8 +444,14 @@ public class ImageManipulator extends Application
 	/**
 	 * Listener function to dynamically resize the window to fit the content
 	 * 
+	 * @param deltaX
+	 *            the horizontal change in window size
 	 * 
-	 * TODO: handle if the image is bigger than the screen (scrollbars)
+	 * @param deltaY
+	 *            the vertical change in window size
+	 * 
+	 *            TODO: handle if the image is bigger than the screen
+	 *            (scrollbars)
 	 */
 	private void resize(double deltaX, double deltaY)
 	{
@@ -419,11 +461,12 @@ public class ImageManipulator extends Application
 
 
 	/**
-	 * Reverts all changes by displaying the original selected image
+	 * Replaces the modified image with a stored copy of the original
 	 */
 	private void revert()
 	{
-		showImage(uploadedImage, true);
+		redoStack.clear();
+		showImage(uploadedImage);
 	}
 
 
@@ -450,5 +493,59 @@ public class ImageManipulator extends Application
 	private String capitalize(String s)
 	{
 		return (s.substring(0, 1).toUpperCase() + s.substring(1)).replaceAll("_", " ");
+	}
+
+
+	/**
+	 * Creates a standardized intensity slider for image effects.
+	 * 
+	 * @return the slider node
+	 */
+	private Node makeCustomSlider()
+	{
+		slider = new Slider(0, 3, 0);
+		// slider.setBlockIncrement(1);
+		slider.setMajorTickUnit(1);
+		slider.setMinorTickCount(0);
+		slider.setShowTickLabels(true);
+		slider.setShowTickMarks(true);
+		slider.setSnapToTicks(true);
+		slider.setPrefWidth(200);
+		slider.setVisible(false);
+		slider.setPrefSize(slider.getWidth(), 1);
+		slider.setId("image_slider");
+
+		return slider;
+	}
+
+
+	/**
+	 * Called when a method from MyImage requiring a parameter is selected. The
+	 * calling method presents the user with a slider, and this method is called
+	 * once the user chooses a value with the slider. The passed method is then
+	 * called with the parameter chosen by the user.
+	 * 
+	 * @param newValue
+	 *            the value the user set the slider to
+	 * @param manipulation
+	 *            the method to invoke on the image
+	 * @param imageToWrite
+	 *            the image to invoke the method on
+	 */
+	private void invokeWithValue(Number newValue, Method manipulation, MyImage imageToWrite)
+	{
+		try
+		{
+			manipulation.invoke(imageToWrite, newValue.intValue());
+			redoStack.clear();
+			showImage(imageToWrite);
+		}
+		catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
+		{
+			Logger.getLogger(ImageManipulator.class.getName()).log(Level.SEVERE,
+					"Problem executing method " + manipulation.getName() + "with argument "
+							+ newValue,
+					e);
+		}
 	}
 }
