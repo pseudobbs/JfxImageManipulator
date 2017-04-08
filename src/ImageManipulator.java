@@ -20,6 +20,8 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
@@ -106,7 +108,6 @@ public class ImageManipulator extends Application
 		primaryStage.setX(0);
 		primaryStage.setY(0);
 		primaryStage.show();
-
 	}
 
 
@@ -139,7 +140,7 @@ public class ImageManipulator extends Application
 
 	/**
 	 * Uses reflection to find the public methods of the MyImage class, then
-	 * creates a button for each method so the user can acess that method.
+	 * creates a button for each method so the user can access it.
 	 * 
 	 * @return a control panel with buttons for each manipulation method in
 	 *         class MyImage
@@ -315,36 +316,34 @@ public class ImageManipulator extends Application
 	 * @param manipulation
 	 *            the method to invoke on the image
 	 */
-	// TODO: would it look better to move some of the else block outside the
-	// try?
 	private void manipulateImage(Method manipulation)
 	{
 		MyImage imageToWrite = new MyImage(imageOnScreen);
+		Parameter[] parameters = manipulation.getParameters();
 
-		try
+		// if we need a parameter, present a slider for the user to input
+		if (parameters.length != 0)
 		{
-			Parameter[] parameters = manipulation.getParameters();
+			slider.setPrefHeight(new Slider().getHeight());
+			slider.setVisible(true);
 
-			if (parameters.length == 0)
+			// listen for user input
+			slider.valueProperty().addListener(
+					(ov, old, newV) -> invokeWithValue(newV, manipulation, imageToWrite));
+		}
+		else
+		{
+			try
 			{
 				manipulation.invoke(imageToWrite);
 				redoStack.clear();
 				showImage(imageToWrite);
 			}
-			else
+			catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
 			{
-				slider.setPrefHeight(new Slider().getHeight());
-				slider.setVisible(true);
-
-				// listen for user input
-				slider.valueProperty().addListener(
-						(ov, old, newV) -> invokeWithValue(newV, manipulation, imageToWrite));
+				Logger.getLogger(ImageManipulator.class.getName()).log(Level.SEVERE,
+						"Problem executing method " + manipulation.getName(), e);
 			}
-		}
-		catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
-		{
-			Logger.getLogger(ImageManipulator.class.getName()).log(Level.SEVERE,
-					"Problem executing method " + manipulation.getName(), e);
 		}
 
 	}
@@ -387,8 +386,6 @@ public class ImageManipulator extends Application
 	/**
 	 * Allows the user to save the image on screen to a location of their choice
 	 * 
-	 * TODO: inform user image was not saved (popup?)
-	 * 
 	 */
 	private void saveImage()
 	{
@@ -406,8 +403,12 @@ public class ImageManipulator extends Application
 		}
 		catch (IOException | IllegalArgumentException e)
 		{
-			Logger.getLogger(ImageManipulator.class.getName()).log(Level.WARNING, "Image not saved",
-					e);
+			Alert alert = new Alert(AlertType.WARNING, "Image not saved.");
+			alert.setHeaderText(null);
+			alert.show();
+
+			Logger.getLogger(ImageManipulator.class.getName()).log(Level.WARNING,
+					"Image not saved");
 		}
 	}
 
@@ -483,7 +484,8 @@ public class ImageManipulator extends Application
 
 
 	/**
-	 * capitalizes the first letter of a string
+	 * Capitalizes the first letter of a string and replaces underscores with
+	 * spaces
 	 * 
 	 * @param s
 	 *            the string to capitalize
@@ -503,8 +505,11 @@ public class ImageManipulator extends Application
 	 */
 	private Node makeCustomSlider()
 	{
+		VBox sliderbox = new VBox();
+		sliderbox.setAlignment(Pos.CENTER);
+
 		slider = new Slider(0, 3, 0);
-		// slider.setBlockIncrement(1);
+		// slider.setBlockIncrement(1); why is this commented out?
 		slider.setMajorTickUnit(1);
 		slider.setMinorTickCount(0);
 		slider.setShowTickLabels(true);
@@ -515,7 +520,12 @@ public class ImageManipulator extends Application
 		slider.setPrefSize(slider.getWidth(), 1);
 		slider.setId("image_slider");
 
-		return slider;
+		Button okbutton = new Button("OK");
+		okbutton.setVisible(false);
+
+		sliderbox.getChildren().addAll(slider, okbutton);
+
+		return sliderbox;
 	}
 
 
@@ -523,7 +533,7 @@ public class ImageManipulator extends Application
 	 * Called when a method from MyImage requiring a parameter is selected. The
 	 * calling method presents the user with a slider, and this method is called
 	 * once the user chooses a value with the slider. The passed method is then
-	 * called with the parameter chosen by the user.
+	 * called with the parameter chosen by the user (via the slider).
 	 * 
 	 * @param newValue
 	 *            the value the user set the slider to
@@ -536,9 +546,26 @@ public class ImageManipulator extends Application
 	{
 		try
 		{
-			manipulation.invoke(imageToWrite, newValue.intValue());
+			// keep a copy of the original to use if the user keeps using the
+			// slider. This way we can apply a more intense effect to the
+			// original image rather than applying a new effect to an already
+			// manipulated image
+			MyImage copy = new MyImage(imageOnScreen);
+			boolean useCopy = imageOnScreen != imageToWrite;
+
+			manipulation.invoke(useCopy ? copy : imageToWrite, newValue.intValue());
 			redoStack.clear();
-			showImage(imageToWrite);
+
+			// shows the image after manipulation without calling showImage,
+			// which has side effects we don't want until the user clicks "OK"
+			imagePanel.getChildren().set(0, new ImageView(useCopy ? copy : imageToWrite));
+
+			// OK button for user to confirm input
+			VBox sliderbox = (VBox) imagePanel.getChildren().get(1);
+			Button okbutton = (Button) sliderbox.getChildren().get(1);
+			okbutton.setVisible(true);
+			okbutton.setOnAction((e) -> showImage(useCopy ? copy : imageToWrite));
+
 		}
 		catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
 		{
