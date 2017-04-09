@@ -24,12 +24,14 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -40,6 +42,8 @@ import javafx.stage.Stage;
 
 public class ImageManipulator extends Application
 {
+	private static final Logger LOGGER = Logger.getLogger(ImageManipulator.class.getName());
+
 	// helpful things to keep track of
 	private Image uploadedImage = null;
 	private String uploadedFileName;
@@ -122,7 +126,7 @@ public class ImageManipulator extends Application
 		HBox hbox = new HBox();
 		hbox.setPadding(new Insets(15, 12, 15, 12));
 		hbox.setAlignment(Pos.CENTER);
-		hbox.setStyle("-fx-background-color: #336699;");
+		hbox.setStyle("-fx-background-color: #369;");
 
 		// title bar
 		Label label = new Label("JavaFX Image Manipulator");
@@ -225,6 +229,7 @@ public class ImageManipulator extends Application
 		vbox.setSpacing(15);
 		vbox.setAlignment(Pos.CENTER);
 
+		// so undo/redo can be side by side
 		HBox hbox = new HBox();
 		hbox.setPadding(new Insets(15));
 		hbox.setSpacing(15);
@@ -272,21 +277,20 @@ public class ImageManipulator extends Application
 
 		try
 		{
-			uploadedFileName = selectedFile.getName().replaceAll("\\.\\w{3}$", "");
+			// remove extension from filename and save to variable
+			uploadedFileName = selectedFile.getName().replaceAll("\\.\\w{3,4}$", "");
 			selectedImage = new Image(new FileInputStream(selectedFile));
 		}
 		catch (FileNotFoundException | NullPointerException e)
 		{
 			actionStatus.setText("File selection cancelled");
-			Logger.getGlobal().log(Level.INFO, "User cancelled file selection");
+			LOGGER.log(Level.INFO, "User cancelled file selection");
 		}
 
 		// keep a copy of the original for revert changes function
 		uploadedImage = selectedImage;
 
 		// clears the stack if there is garbage from a previous image in it
-		// TODO: is this desirable? this prevents undoing back to a previous
-		// image
 		undoStack.clear();
 		redoStack.clear();
 
@@ -301,6 +305,14 @@ public class ImageManipulator extends Application
 		else
 		{
 			resize(selectedImage.getWidth(), selectedImage.getHeight());
+		}
+
+		if (selectedImage.getWidth() * selectedImage.getHeight() >= 1_000_000)
+		{
+			Alert alert = new Alert(AlertType.WARNING,
+					"WARNING: Image exceeds maximum recommended size.  Performance will suffer");
+			alert.setHeaderText(null);
+			alert.show();
 		}
 
 		showImage(selectedImage);
@@ -341,8 +353,7 @@ public class ImageManipulator extends Application
 			}
 			catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
 			{
-				Logger.getLogger(ImageManipulator.class.getName()).log(Level.SEVERE,
-						"Problem executing method " + manipulation.getName(), e);
+				LOGGER.log(Level.SEVERE, "Problem executing method " + manipulation.getName(), e);
 			}
 		}
 
@@ -355,8 +366,16 @@ public class ImageManipulator extends Application
 	 * @param image
 	 *            the image to display
 	 */
+	// TODO: make scroll bars fatter/more noticeable
+	// TODO: slider operations on huge images take way too long (parallelizing
+	// w/streams?)
+	// TODO: on huge images, slider should appear in a box or somewhere besides
+	// centered below the image
 	private void showImage(Image image)
 	{
+		// if image is very large, use scroll bars
+		boolean useScrollPane = image.getHeight() * image.getWidth() >= 640_000;
+		ScrollPane sp = null;
 		ImageView imageView = new ImageView(image);
 
 		// fit height of 0 means set the dimensions to match the image contained
@@ -368,11 +387,24 @@ public class ImageManipulator extends Application
 		imagePanel.getChildren().add(imageView);
 		imagePanel.getChildren().add(makeCustomSlider());
 
+		if (useScrollPane)
+		{
+			sp = new ScrollPane();
+			imagePanel.getChildren().add(sp);
+			imagePanel.setAlignment(Pos.CENTER);
+			VBox.setVgrow(sp, Priority.ALWAYS);
+			sp.setContent(imagePanel);
+			sp.setPannable(true);
+			// TODO: this doesn't work
+			sp.setStyle(".scroll-bar { -fx-pref-width: 24px;}");
+		}
+
 		// set correct panels for user
-		border.setCenter(imagePanel);
+		border.setCenter(useScrollPane ? sp : imagePanel);
 		border.setLeft(controlPanel);
 		border.setRight(savePanel);
 
+		// allow user to undo this manipulation
 		undoStack.push(image);
 
 		undoButton.setDisable(undoStack.size() == 1);
@@ -407,8 +439,7 @@ public class ImageManipulator extends Application
 			alert.setHeaderText(null);
 			alert.show();
 
-			Logger.getLogger(ImageManipulator.class.getName()).log(Level.WARNING,
-					"Image not saved");
+			LOGGER.log(Level.WARNING, "Image not saved");
 		}
 	}
 
@@ -450,14 +481,19 @@ public class ImageManipulator extends Application
 	 * 
 	 * @param deltaY
 	 *            the vertical change in window size
-	 * 
-	 *            TODO: handle if the image is bigger than the screen
-	 *            (scrollbars)
 	 */
 	private void resize(double deltaX, double deltaY)
 	{
-		primaryStage.setWidth(primaryStage.getWidth() + deltaX);
-		primaryStage.setHeight(primaryStage.getHeight() + deltaY);
+		if (deltaY > 600)
+		{
+			primaryStage.setHeight(600);
+			primaryStage.setWidth(900);
+		}
+		else
+		{
+			primaryStage.setWidth(primaryStage.getWidth() + deltaX);
+			primaryStage.setHeight(primaryStage.getHeight() + deltaY);
+		}
 	}
 
 
@@ -477,9 +513,12 @@ public class ImageManipulator extends Application
 	 */
 	private void reset()
 	{
+		imageOnScreen = null;
 		border.setLeft(null);
 		border.setCenter(filePanel);
 		border.setRight(null);
+		primaryStage.setWidth(400);
+		primaryStage.setHeight(300);
 	}
 
 
@@ -516,8 +555,9 @@ public class ImageManipulator extends Application
 		slider.setShowTickMarks(true);
 		slider.setSnapToTicks(true);
 		slider.setPrefWidth(200);
+		slider.setMaxWidth(200);
 		slider.setVisible(false);
-		slider.setPrefSize(slider.getWidth(), 1);
+		// slider.setPrefSize(slider.getWidth(), 1);
 		slider.setId("image_slider");
 
 		Button okbutton = new Button("OK");
@@ -569,10 +609,8 @@ public class ImageManipulator extends Application
 		}
 		catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
 		{
-			Logger.getLogger(ImageManipulator.class.getName()).log(Level.SEVERE,
-					"Problem executing method " + manipulation.getName() + "with argument "
-							+ newValue,
-					e);
+			LOGGER.log(Level.SEVERE, "Problem executing method " + manipulation.getName()
+					+ "with argument " + newValue, e);
 		}
 	}
 }
