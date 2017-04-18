@@ -3,6 +3,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import javafx.scene.image.Image;
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 
@@ -10,6 +12,9 @@ import javafx.scene.paint.Color;
 // TODO: possible methods: enlarge, shrink, rotate, flip
 public class MyImage extends WritableImage
 {
+	private final PixelReader PIXEL_READER = this.getPixelReader();
+	private final PixelWriter PIXEL_WRITER = this.getPixelWriter();
+
 
 	public MyImage(int width, int height)
 	{
@@ -31,7 +36,7 @@ public class MyImage extends WritableImage
 		{
 			for (int x = 0; x < this.getWidth(); x++)
 			{
-				this.getPixelWriter().setColor(x, y, image.getPixelReader().getColor(x, y));
+				PIXEL_WRITER.setColor(x, y, image.getPixelReader().getColor(x, y));
 			}
 		}
 	}
@@ -45,7 +50,7 @@ public class MyImage extends WritableImage
 		{
 			for (int x = 0; x < this.getWidth(); x++)
 			{
-				if (this.getPixelReader().getColor(x, y).getOpacity() == 0)
+				if (PIXEL_READER.getColor(x, y).getOpacity() == 0)
 				{
 					newColors[y][x] = Color.TRANSPARENT;
 					continue;
@@ -67,7 +72,7 @@ public class MyImage extends WritableImage
 						{
 							// get color of the pixel 'w' pixels away in any
 							// direction
-							Color currPixel = this.getPixelReader().getColor(x + i, y + j);
+							Color currPixel = PIXEL_READER.getColor(x + i, y + j);
 							float kernelValue = kernel[j + w][i + w];
 
 							// sum of rgb values of the averaged pixels
@@ -100,7 +105,7 @@ public class MyImage extends WritableImage
 		{
 			for (int x = 0; x < this.getWidth(); x++)
 			{
-				this.getPixelWriter().setColor(x, y, newColors[y][x]);
+				PIXEL_WRITER.setColor(x, y, newColors[y][x]);
 			}
 		}
 	}
@@ -142,7 +147,7 @@ public class MyImage extends WritableImage
 		{
 			for (int x = 0; x < this.getWidth(); x++)
 			{
-				this.getPixelWriter().setColor(x, y, this.getPixelReader().getColor(x, y).invert());
+				PIXEL_WRITER.setColor(x, y, PIXEL_READER.getColor(x, y).invert());
 			}
 		}
 	}
@@ -200,7 +205,7 @@ public class MyImage extends WritableImage
 				{
 					double closestDistance = Double.MAX_VALUE;
 					int closestColorIndex = -1;
-					Color thisColor = this.getPixelReader().getColor(x, y);
+					Color thisColor = PIXEL_READER.getColor(x, y);
 
 					// get the color of the current pixel in the image and see
 					// how close it is to the colors in our list
@@ -269,7 +274,7 @@ public class MyImage extends WritableImage
 			{
 				double closestDistance = Double.MAX_VALUE;
 				Color closestColor = null;
-				Color thisColor = this.getPixelReader().getColor(x, y);
+				Color thisColor = PIXEL_READER.getColor(x, y);
 
 				for (Color possibleColor : finalColors)
 				{
@@ -284,7 +289,7 @@ public class MyImage extends WritableImage
 					closestDistance = currentDistance;
 				}
 
-				this.getPixelWriter().setColor(x, y, closestColor);
+				PIXEL_WRITER.setColor(x, y, closestColor);
 			}
 		}
 	}

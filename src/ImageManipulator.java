@@ -40,6 +40,7 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+// TODO: is it being slow b/c maybe the manipulations are getting called several times when the slider moves?
 public class ImageManipulator extends Application
 {
 	private static final Logger LOGGER = Logger.getLogger(ImageManipulator.class.getName());
@@ -62,7 +63,7 @@ public class ImageManipulator extends Application
 	private VBox filePanel;
 	private VBox savePanel;
 	private HBox titleBar;
-	private Slider slider;
+	private static Slider slider;
 
 	// for undo/redo
 	private Stack<Image> undoStack = new Stack<>();
@@ -328,20 +329,32 @@ public class ImageManipulator extends Application
 	 * @param manipulation
 	 *            the method to invoke on the image
 	 */
+	// TODO: here we need to put the slider in a popup if the image is very
+	// large
 	private void manipulateImage(Method manipulation)
 	{
 		MyImage imageToWrite = new MyImage(imageOnScreen);
 		Parameter[] parameters = manipulation.getParameters();
 
+		// listen for user input
+		slider.valueProperty()
+				.addListener((ov, old, newV) -> invokeWithValue(newV, manipulation, imageToWrite));
+
 		// if we need a parameter, present a slider for the user to input
 		if (parameters.length != 0)
 		{
-			slider.setPrefHeight(new Slider().getHeight());
-			slider.setVisible(true);
-
-			// listen for user input
-			slider.valueProperty().addListener(
-					(ov, old, newV) -> invokeWithValue(newV, manipulation, imageToWrite));
+			// if the image is very large, display the slider on top of it
+			// else display the slider underneath
+			if (imageOnScreen.getHeight() * imageOnScreen.getWidth() >= 640_000)
+			{
+				Popup.setTitle(manipulation.getName());
+				Popup.display();
+			}
+			else
+			{
+				slider.setPrefHeight(new Slider().getHeight());
+				slider.setVisible(true);
+			}
 		}
 		else
 		{
@@ -542,6 +555,7 @@ public class ImageManipulator extends Application
 	 * 
 	 * @return the slider node
 	 */
+	// TODO: make this a class
 	private Node makeCustomSlider()
 	{
 		VBox sliderbox = new VBox();
@@ -582,7 +596,9 @@ public class ImageManipulator extends Application
 	 * @param imageToWrite
 	 *            the image to invoke the method on
 	 */
-	private void invokeWithValue(Number newValue, Method manipulation, MyImage imageToWrite)
+	// TODO: is there a way to keep this private? reflection maybe (I don't
+	// think so, but...)
+	void invokeWithValue(Number newValue, Method manipulation, MyImage imageToWrite)
 	{
 		try
 		{
@@ -612,5 +628,18 @@ public class ImageManipulator extends Application
 			LOGGER.log(Level.SEVERE, "Problem executing method " + manipulation.getName()
 					+ "with argument " + newValue, e);
 		}
+	}
+
+
+	/**
+	 * Triggers the valueProperty change listener so the image is properly
+	 * manipulated via the popup
+	 * 
+	 * @param value
+	 *            the value to set the slider to
+	 */
+	static void setSliderValue(double value)
+	{
+		slider.valueProperty().set(value);
 	}
 }
