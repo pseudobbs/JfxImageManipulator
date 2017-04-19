@@ -18,7 +18,6 @@ import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -47,6 +46,7 @@ public class ImageManipulator extends Application
 
 	// helpful things to keep track of
 	private Image uploadedImage = null;
+	private MyImage copy = null;
 	private String uploadedFileName;
 	private Image imageOnScreen = null;
 	private Text actionStatus = new Text();
@@ -63,7 +63,8 @@ public class ImageManipulator extends Application
 	private VBox filePanel;
 	private VBox savePanel;
 	private HBox titleBar;
-	private static Slider slider;
+	// private static Slider slider;
+	private static ImageSliderBox sliderBox = new ImageSliderBox(10);
 
 	// for undo/redo
 	private Stack<Image> undoStack = new Stack<>();
@@ -337,7 +338,7 @@ public class ImageManipulator extends Application
 		Parameter[] parameters = manipulation.getParameters();
 
 		// listen for user input
-		slider.valueProperty()
+		sliderBox.getSlider().valueProperty()
 				.addListener((ov, old, newV) -> invokeWithValue(newV, manipulation, imageToWrite));
 
 		// if we need a parameter, present a slider for the user to input
@@ -352,8 +353,9 @@ public class ImageManipulator extends Application
 			}
 			else
 			{
-				slider.setPrefHeight(new Slider().getHeight());
-				slider.setVisible(true);
+				// TODO: sliderBox.showSlider()
+				sliderBox.getSlider().setPrefHeight(new Slider().getHeight());
+				sliderBox.getSlider().setVisible(true);
 			}
 		}
 		else
@@ -390,6 +392,8 @@ public class ImageManipulator extends Application
 		boolean useScrollPane = image.getHeight() * image.getWidth() >= 640_000;
 		ScrollPane sp = null;
 		ImageView imageView = new ImageView(image);
+		sliderBox = new ImageSliderBox(10);
+		// slider = sliderBox.getSlider();
 
 		// fit height of 0 means set the dimensions to match the image contained
 		imageView.setFitHeight(0);
@@ -398,7 +402,8 @@ public class ImageManipulator extends Application
 		// clear out previous image in the image panel and add a new one
 		imagePanel.getChildren().clear();
 		imagePanel.getChildren().add(imageView);
-		imagePanel.getChildren().add(makeCustomSlider());
+		// imagePanel.getChildren().add(makeCustomSlider());
+		imagePanel.getChildren().add(sliderBox);
 
 		if (useScrollPane)
 		{
@@ -551,39 +556,6 @@ public class ImageManipulator extends Application
 
 
 	/**
-	 * Creates a standardized intensity slider for image effects.
-	 * 
-	 * @return the slider node
-	 */
-	// TODO: make this a class
-	private Node makeCustomSlider()
-	{
-		VBox sliderbox = new VBox();
-		sliderbox.setAlignment(Pos.CENTER);
-
-		slider = new Slider(0, 3, 0);
-		// slider.setBlockIncrement(1); why is this commented out?
-		slider.setMajorTickUnit(1);
-		slider.setMinorTickCount(0);
-		slider.setShowTickLabels(true);
-		slider.setShowTickMarks(true);
-		slider.setSnapToTicks(true);
-		slider.setPrefWidth(200);
-		slider.setMaxWidth(200);
-		slider.setVisible(false);
-		// slider.setPrefSize(slider.getWidth(), 1);
-		slider.setId("image_slider");
-
-		Button okbutton = new Button("OK");
-		okbutton.setVisible(false);
-
-		sliderbox.getChildren().addAll(slider, okbutton);
-
-		return sliderbox;
-	}
-
-
-	/**
 	 * Called when a method from MyImage requiring a parameter is selected. The
 	 * calling method presents the user with a slider, and this method is called
 	 * once the user chooses a value with the slider. The passed method is then
@@ -596,9 +568,7 @@ public class ImageManipulator extends Application
 	 * @param imageToWrite
 	 *            the image to invoke the method on
 	 */
-	// TODO: is there a way to keep this private? reflection maybe (I don't
-	// think so, but...)
-	void invokeWithValue(Number newValue, Method manipulation, MyImage imageToWrite)
+	private void invokeWithValue(Number newValue, Method manipulation, MyImage imageToWrite)
 	{
 		try
 		{
@@ -606,7 +576,7 @@ public class ImageManipulator extends Application
 			// slider. This way we can apply a more intense effect to the
 			// original image rather than applying a new effect to an already
 			// manipulated image
-			MyImage copy = new MyImage(imageOnScreen);
+			copy = new MyImage(imageOnScreen);
 			boolean useCopy = imageOnScreen != imageToWrite;
 
 			manipulation.invoke(useCopy ? copy : imageToWrite, newValue.intValue());
@@ -617,6 +587,7 @@ public class ImageManipulator extends Application
 			imagePanel.getChildren().set(0, new ImageView(useCopy ? copy : imageToWrite));
 
 			// OK button for user to confirm input
+			// TODO: this can be done better now
 			VBox sliderbox = (VBox) imagePanel.getChildren().get(1);
 			Button okbutton = (Button) sliderbox.getChildren().get(1);
 			okbutton.setVisible(true);
@@ -635,11 +606,17 @@ public class ImageManipulator extends Application
 	 * Triggers the valueProperty change listener so the image is properly
 	 * manipulated via the popup
 	 * 
-	 * @param value
+	 * @param sliderValue
 	 *            the value to set the slider to
 	 */
-	static void setSliderValue(double value)
+	static void setSliderValue(double sliderValue)
 	{
-		slider.valueProperty().set(value);
+		sliderBox.getSlider().valueProperty().set(sliderValue);
+	}
+
+
+	static void pressOK()
+	{
+		sliderBox.getOkButton().fireEvent(new ActionEvent());
 	}
 }

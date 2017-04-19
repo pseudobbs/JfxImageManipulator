@@ -1,17 +1,17 @@
+import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.Slider;
-import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 // TODO: try just using ImageManipulator's slider directly in this class
+// TODO: canceling should revert to original image (particular problems with reduce colors)
 public class Popup
 {
 	static Stage popupwindow = new Stage();
 	static String title = "";
-	static Number sliderValue = 0;
+	static double sliderValue = 0;
 
 
 	public static void display()
@@ -19,44 +19,39 @@ public class Popup
 		// TODO: multiple calls to open the popup throw exception setting
 		// modality more than once
 		popupwindow.initModality(Modality.NONE);
-		popupwindow.setTitle("This is a pop up window");
 
-		Slider slider = new Slider(0, 3, 0);
-		// slider.setBlockIncrement(1); why is this commented out?
-		slider.setMajorTickUnit(1);
-		slider.setMinorTickCount(0);
-		slider.setShowTickLabels(true);
-		slider.setShowTickMarks(true);
-		slider.setSnapToTicks(true);
-		slider.setPrefWidth(200);
-		slider.setMaxWidth(200);
-		slider.setVisible(true);
-		// slider.setPrefSize(slider.getWidth(), 1);
-		slider.setId("image_slider");
-		slider.valueProperty().addListener((ov, old, newV) -> sliderValue = (double) newV);
+		ImageSliderBox sliderBox = new ImageSliderBox(10);
+		sliderBox.setAlignment(Pos.CENTER);
 
-		Button okbutton = new Button("OK");
-		okbutton.setVisible(true);
-		okbutton.setOnAction(e -> reportSliderValue(slider.getValue()));
+		Button previewButton = sliderBox.getOkButton();
+		sliderBox.getSlider().setVisible(true);
+		previewButton.setVisible(true);
+		previewButton.setText("Preview");
+		previewButton.setOnAction(e -> ImageManipulator.setSliderValue(sliderValue));
+		sliderBox.getSlider().valueProperty()
+				.addListener((ov, old, newV) -> sliderValue = (double) newV);
 
-		Button okBtn = new Button("Close");
-		okBtn.setAlignment(Pos.CENTER);
-		okBtn.setOnAction(e -> popupwindow.close());
+		Button acceptButton = new Button("Accept");
+		acceptButton.setAlignment(Pos.CENTER_LEFT);
+		acceptButton.setOnAction(e -> {
+			ImageManipulator.pressOK();
+			popupwindow.close();
+		});
 
-		VBox layout = new VBox(10);
-		layout.getChildren().addAll(slider, okBtn, okbutton);
-		layout.setAlignment(Pos.CENTER);
+		Button closeButton = new Button("Cancel");
+		closeButton.setAlignment(Pos.CENTER_RIGHT);
+		closeButton.setOnAction(e -> {
+			sliderBox.getSlider().valueProperty().set(0);
+			previewButton.fireEvent(new ActionEvent());
+			popupwindow.close();
+		});
 
-		Scene scene1 = new Scene(layout, 300, 250);
+		sliderBox.getChildren().addAll(acceptButton, closeButton);
+
+		Scene scene1 = new Scene(sliderBox, 300, 250);
 
 		popupwindow.setScene(scene1);
 		popupwindow.showAndWait();
-	}
-
-
-	static void reportSliderValue(double value)
-	{
-		ImageManipulator.setSliderValue(value);
 	}
 
 
