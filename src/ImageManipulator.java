@@ -39,7 +39,7 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-// TODO: is it being slow b/c maybe the manipulations are getting called several times when the slider moves?
+// TODO: use classes b/c this file is getting unwieldy
 public class ImageManipulator extends Application
 {
 	private static final Logger LOGGER = Logger.getLogger(ImageManipulator.class.getName());
@@ -63,7 +63,6 @@ public class ImageManipulator extends Application
 	private VBox filePanel;
 	private VBox savePanel;
 	private HBox titleBar;
-	// private static Slider slider;
 	private static ImageSliderBox sliderBox = new ImageSliderBox(10);
 
 	// for undo/redo
@@ -330,8 +329,6 @@ public class ImageManipulator extends Application
 	 * @param manipulation
 	 *            the method to invoke on the image
 	 */
-	// TODO: here we need to put the slider in a popup if the image is very
-	// large
 	private void manipulateImage(Method manipulation)
 	{
 		MyImage imageToWrite = new MyImage(imageOnScreen);
@@ -348,12 +345,13 @@ public class ImageManipulator extends Application
 			// else display the slider underneath
 			if (imageOnScreen.getHeight() * imageOnScreen.getWidth() >= 640_000)
 			{
-				Popup.setTitle(manipulation.getName());
-				Popup.display();
+				Popup popup = new Popup();
+				popup.getCancelButton().visibleProperty().addListener(o -> showCopy());
+				popup.setTitle(manipulation.getName());
+				popup.display();
 			}
 			else
 			{
-				// TODO: sliderBox.showSlider()
 				sliderBox.getSlider().setPrefHeight(new Slider().getHeight());
 				sliderBox.getSlider().setVisible(true);
 			}
@@ -381,11 +379,8 @@ public class ImageManipulator extends Application
 	 * @param image
 	 *            the image to display
 	 */
-	// TODO: make scroll bars fatter/more noticeable
 	// TODO: slider operations on huge images take way too long (parallelizing
 	// w/streams?)
-	// TODO: on huge images, slider should appear in a box or somewhere besides
-	// centered below the image
 	private void showImage(Image image)
 	{
 		// if image is very large, use scroll bars
@@ -393,7 +388,6 @@ public class ImageManipulator extends Application
 		ScrollPane sp = null;
 		ImageView imageView = new ImageView(image);
 		sliderBox = new ImageSliderBox(10);
-		// slider = sliderBox.getSlider();
 
 		// fit height of 0 means set the dimensions to match the image contained
 		imageView.setFitHeight(0);
@@ -570,6 +564,10 @@ public class ImageManipulator extends Application
 	 */
 	private void invokeWithValue(Number newValue, Method manipulation, MyImage imageToWrite)
 	{
+		if (newValue.doubleValue() % 1 != 0)
+		{
+			return;
+		}
 		try
 		{
 			// keep a copy of the original to use if the user keeps using the
@@ -586,12 +584,8 @@ public class ImageManipulator extends Application
 			// which has side effects we don't want until the user clicks "OK"
 			imagePanel.getChildren().set(0, new ImageView(useCopy ? copy : imageToWrite));
 
-			// OK button for user to confirm input
-			// TODO: this can be done better now
-			VBox sliderbox = (VBox) imagePanel.getChildren().get(1);
-			Button okbutton = (Button) sliderbox.getChildren().get(1);
-			okbutton.setVisible(true);
-			okbutton.setOnAction((e) -> showImage(useCopy ? copy : imageToWrite));
+			sliderBox.getOkButton().setVisible(true);
+			sliderBox.getOkButton().setOnAction((e) -> showImage(useCopy ? copy : imageToWrite));
 
 		}
 		catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
@@ -618,5 +612,13 @@ public class ImageManipulator extends Application
 	static void pressOK()
 	{
 		sliderBox.getOkButton().fireEvent(new ActionEvent());
+	}
+
+
+	public void showCopy()
+	{
+		showImage(imageOnScreen);
+		undoStack.pop();
+		undoButton.setDisable(undoStack.size() == 1);
 	}
 }

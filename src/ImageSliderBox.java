@@ -1,6 +1,7 @@
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Slider;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 // Creates a VBox with a slider and an OK button
@@ -15,7 +16,6 @@ public class ImageSliderBox extends VBox
 		super(spacing);
 		this.setAlignment(Pos.CENTER);
 
-		// slider.setBlockIncrement(1); why is this commented out?
 		slider.setMajorTickUnit(1);
 		slider.setMinorTickCount(0);
 		slider.setShowTickLabels(true);
@@ -24,12 +24,13 @@ public class ImageSliderBox extends VBox
 		slider.setPrefWidth(200);
 		slider.setMaxWidth(200);
 		slider.setVisible(false);
-		// slider.setPrefSize(slider.getWidth(), 1);
 		slider.setId("image_slider");
 
 		okButton.setVisible(false);
 
-		this.getChildren().addAll(slider, okButton);
+		HBox sliderRow = new HBox(5);
+		sliderRow.getChildren().addAll(slider, okButton);
+		this.getChildren().addAll(sliderRow);
 	}
 
 
@@ -39,6 +40,7 @@ public class ImageSliderBox extends VBox
 	}
 
 
+	// TODO: OK button text should be the name of the manipulation
 	public Button getOkButton()
 	{
 		return this.okButton;

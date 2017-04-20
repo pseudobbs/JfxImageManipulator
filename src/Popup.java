@@ -1,52 +1,73 @@
-import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 // TODO: try just using ImageManipulator's slider directly in this class
 // TODO: canceling should revert to original image (particular problems with reduce colors)
+// TODO: implement stacks here so the popup can undo/redo
 public class Popup
 {
-	static Stage popupwindow = new Stage();
-	static String title = "";
-	static double sliderValue = 0;
+	Stage popupwindow = new Stage();
+	ImageSliderBox sliderBox;
+	HBox status;
+	HBox buttons;
+	Label statusText;
+	String title;
+	double sliderValue;
+
+	Button cancelButton = new Button("Cancel");
+	Button acceptButton = new Button("Accept");
 
 
-	public static void display()
+	public Popup()
 	{
-		// TODO: multiple calls to open the popup throw exception setting
-		// modality more than once
 		popupwindow.initModality(Modality.NONE);
+	};
 
-		ImageSliderBox sliderBox = new ImageSliderBox(10);
-		sliderBox.setAlignment(Pos.CENTER);
 
-		Button previewButton = sliderBox.getOkButton();
+	public void display()
+	{
+		sliderBox = new ImageSliderBox(10);
 		sliderBox.getSlider().setVisible(true);
-		previewButton.setVisible(true);
-		previewButton.setText("Preview");
-		previewButton.setOnAction(e -> ImageManipulator.setSliderValue(sliderValue));
+		sliderBox.setAlignment(Pos.CENTER);
 		sliderBox.getSlider().valueProperty()
 				.addListener((ov, old, newV) -> sliderValue = (double) newV);
 
-		Button acceptButton = new Button("Accept");
+		Button previewButton = sliderBox.getOkButton();
+		previewButton.setVisible(true);
+		previewButton.setText("Preview");
+		previewButton.setOnAction(e -> {
+			// TODO: this doesn't happen until after the next call. why not?
+			statusText.setVisible(true);
+			ImageManipulator.setSliderValue(sliderValue);
+			// statusText.setText("");
+		});
+
 		acceptButton.setAlignment(Pos.CENTER_LEFT);
 		acceptButton.setOnAction(e -> {
 			ImageManipulator.pressOK();
 			popupwindow.close();
 		});
 
-		Button closeButton = new Button("Cancel");
-		closeButton.setAlignment(Pos.CENTER_RIGHT);
-		closeButton.setOnAction(e -> {
-			sliderBox.getSlider().valueProperty().set(0);
-			previewButton.fireEvent(new ActionEvent());
+		cancelButton.setAlignment(Pos.CENTER_RIGHT);
+		cancelButton.setOnAction(e -> {
+			cancelButton.setVisible(false);
 			popupwindow.close();
 		});
 
-		sliderBox.getChildren().addAll(acceptButton, closeButton);
+		buttons = new HBox(5);
+		buttons.getChildren().addAll(acceptButton, cancelButton);
+
+		status = new HBox(5);
+		statusText = new Label("Processing...");
+		statusText.setVisible(false);
+		status.getChildren().add(statusText);
+
+		sliderBox.getChildren().addAll(buttons, status);
 
 		Scene scene1 = new Scene(sliderBox, 300, 250);
 
@@ -55,9 +76,27 @@ public class Popup
 	}
 
 
-	public static void setTitle(String title)
+	public void setTitle(String title)
 	{
-		Popup.title = title;
+		this.title = title;
 		popupwindow.setTitle(title);
+	}
+
+
+	public Button getCancelButton()
+	{
+		return cancelButton;
+	}
+
+
+	public ImageSliderBox getSliderBox()
+	{
+		return sliderBox;
+	}
+
+
+	public void setStatusText(String text)
+	{
+		statusText.setText(text);
 	}
 }
