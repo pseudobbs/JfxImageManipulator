@@ -8,7 +8,6 @@ import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 
-// TODO: add double constructor and stop casting on instantiation
 // TODO: possible methods: enlarge, shrink, rotate, flip
 public class MyImage extends WritableImage
 {
@@ -113,8 +112,6 @@ public class MyImage extends WritableImage
 
 	public void blur(int w)
 	{
-		// int w = 2;
-
 		float[][] blurKernel = new float[2 * w + 1][2 * w + 1];
 
 		for (float[] row : blurKernel)

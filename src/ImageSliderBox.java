@@ -23,12 +23,11 @@ public class ImageSliderBox extends VBox
 		slider.setSnapToTicks(true);
 		slider.setPrefWidth(200);
 		slider.setMaxWidth(200);
-		slider.setVisible(false);
 		slider.setId("image_slider");
 
-		okButton.setVisible(false);
-
 		HBox sliderRow = new HBox(5);
+		sliderRow.setAlignment(Pos.CENTER);
+
 		sliderRow.getChildren().addAll(slider, okButton);
 		this.getChildren().addAll(sliderRow);
 	}
