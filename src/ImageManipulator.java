@@ -20,8 +20,6 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-// TODO: package access instead of getter/setters in this class only
-// TODO: clean up getters/setters, some might be unused
 // TODO: undo button goes too far
 // TODO: drag and drop images to load
 public class ImageManipulator extends Application
@@ -71,13 +69,13 @@ public class ImageManipulator extends Application
 		border.setTop(titleBar);
 		border.setLeft(null);
 		border.setRight(null);
-		border.setCenter(getFilePanel());
+		border.setCenter(filePanel);
 		border.setBottom(null);
 
 		// add elements to window
 		root = new FlowPane();
 		scene = new Scene(root, 400, 300);
-		root.getChildren().add(getBorder());
+		root.getChildren().add(border);
 
 		// force BorderPane to fit window size
 		border.prefHeightProperty().bind(scene.heightProperty());
@@ -102,17 +100,17 @@ public class ImageManipulator extends Application
 	static void processUploadedImage()
 	{
 		// keep a copy of the original for revert changes function
-		uploadedImage = getFilePanel().getSelectedImage();
+		uploadedImage = filePanel.getSelectedImage();
 
 		// clears the stack if there is garbage from a previous image in it
 		undoStack.clear();
-		getRedoStack().clear();
+		redoStack.clear();
 
 		// resize window based on image size
-		if (getImageOnScreen() != null)
+		if (imageOnScreen != null)
 		{
-			double deltaX = uploadedImage.getWidth() - getImageOnScreen().getWidth();
-			double deltaY = uploadedImage.getHeight() - getImageOnScreen().getHeight();
+			double deltaX = uploadedImage.getWidth() - imageOnScreen.getWidth();
+			double deltaY = uploadedImage.getHeight() - imageOnScreen.getHeight();
 
 			resize(deltaX, deltaY);
 		}
@@ -145,7 +143,7 @@ public class ImageManipulator extends Application
 	 */
 	static void manipulateImage(Method manipulation)
 	{
-		MyImage imageToWrite = new MyImage(getImageOnScreen());
+		MyImage imageToWrite = new MyImage(imageOnScreen);
 		Parameter[] parameters = manipulation.getParameters();
 
 		// if we need a parameter, present a slider for the user to input
@@ -162,7 +160,7 @@ public class ImageManipulator extends Application
 			try
 			{
 				manipulation.invoke(imageToWrite);
-				getRedoStack().clear();
+				redoStack.clear();
 				showImage(imageToWrite);
 			}
 			catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
@@ -302,11 +300,11 @@ public class ImageManipulator extends Application
 			// slider. This way we can apply a more intense effect to the
 			// original image rather than applying a new effect to an already
 			// manipulated image
-			copy = new MyImage(getImageOnScreen());
-			boolean useCopy = getImageOnScreen() != imageToWrite;
+			copy = new MyImage(imageOnScreen);
+			boolean useCopy = imageOnScreen != imageToWrite;
 
 			manipulation.invoke(useCopy ? copy : imageToWrite, newValue.intValue());
-			getRedoStack().clear();
+			redoStack.clear();
 
 			// shows the image after manipulation without calling showImage,
 			// which has side effects we don't want until the user clicks "OK"
@@ -334,31 +332,11 @@ public class ImageManipulator extends Application
 
 
 	/**
-	 * @param primaryStage
-	 *            the primaryStage to set
-	 */
-	public static void setPrimaryStage(Stage primaryStage)
-	{
-		ImageManipulator.primaryStage = primaryStage;
-	}
-
-
-	/**
 	 * @return the redoStack
 	 */
 	public static Stack<Image> getRedoStack()
 	{
 		return redoStack;
-	}
-
-
-	/**
-	 * @param redoStack
-	 *            the redoStack to set
-	 */
-	public static void setRedoStack(Stack<Image> redoStack)
-	{
-		ImageManipulator.redoStack = redoStack;
 	}
 
 
@@ -372,16 +350,6 @@ public class ImageManipulator extends Application
 
 
 	/**
-	 * @param border
-	 *            the border to set
-	 */
-	public static void setBorder(BorderPane border)
-	{
-		ImageManipulator.border = border;
-	}
-
-
-	/**
 	 * @return the uploadedImage
 	 */
 	public static Image getUploadedImage()
@@ -391,31 +359,11 @@ public class ImageManipulator extends Application
 
 
 	/**
-	 * @param uploadedImage
-	 *            the uploadedImage to set
-	 */
-	public static void setUploadedImage(Image uploadedImage)
-	{
-		ImageManipulator.uploadedImage = uploadedImage;
-	}
-
-
-	/**
 	 * @return the filePanel
 	 */
 	public static FilePanel getFilePanel()
 	{
 		return filePanel;
-	}
-
-
-	/**
-	 * @param filePanel
-	 *            the filePanel to set
-	 */
-	public static void setFilePanel(FilePanel filePanel)
-	{
-		ImageManipulator.filePanel = filePanel;
 	}
 
 
@@ -444,15 +392,5 @@ public class ImageManipulator extends Application
 	public static String getUploadedFileName()
 	{
 		return uploadedFileName;
-	}
-
-
-	/**
-	 * @param uploadedFileName
-	 *            the uploadedFileName to set
-	 */
-	public static void setUploadedFileName(String uploadedFileName)
-	{
-		ImageManipulator.uploadedFileName = uploadedFileName;
 	}
 }
