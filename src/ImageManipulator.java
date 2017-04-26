@@ -20,7 +20,6 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-// TODO: undo button goes too far
 // TODO: drag and drop images to load
 public class ImageManipulator extends Application
 {
@@ -75,6 +74,7 @@ public class ImageManipulator extends Application
 		// add elements to window
 		root = new FlowPane();
 		scene = new Scene(root, 400, 300);
+		// scene.getStylesheets().add(ImageManipulator.class.getResource("im.css").toExternalForm());
 		root.getChildren().add(border);
 
 		// force BorderPane to fit window size
@@ -147,11 +147,31 @@ public class ImageManipulator extends Application
 		Parameter[] parameters = manipulation.getParameters();
 
 		// if we need a parameter, present a slider for the user to input
-		if (parameters.length != 0)
+		if (parameters.length == 2)
 		{
 			// listen for user input
+			sliderBox.getComboBox().setVisible(true);
+
+			sliderBox.getOkButton().setText(capitalize(manipulation.getName()));
+
+			sliderBox.getComboBox().valueProperty().addListener((ov, old, newV) -> invokeWithValue(
+					sliderBox.getSlider().getValue(), newV, manipulation, imageToWrite));
+
+			sliderBox.getSlider().valueProperty()
+					.addListener((ov, old, newV) -> invokeWithValue(newV,
+							sliderBox.getComboBox().getValue(), manipulation, imageToWrite));
+
+			border.setBottom(sliderBox);
+		}
+		else if (parameters.length != 0)
+		{
+			sliderBox.getOkButton().setText(capitalize(manipulation.getName()));
+
+			// listen for user inputs
 			sliderBox.getSlider().valueProperty().addListener(
-					(ov, old, newV) -> invokeWithValue(newV, manipulation, imageToWrite));
+					(ov, old, newV) -> invokeWithValue(newV, null, manipulation, imageToWrite));
+
+			sliderBox.getComboBox().setVisible(false);
 
 			border.setBottom(sliderBox);
 		}
@@ -197,13 +217,13 @@ public class ImageManipulator extends Application
 		if (useScrollPane)
 		{
 			sp = new ScrollPane();
+			// TODO: this doesn't work
+			sp.getStylesheets().add(ImageManipulator.class.getResource("im.css").toExternalForm());
 			imagePanel.getChildren().add(sp);
 			imagePanel.setAlignment(Pos.CENTER);
 			VBox.setVgrow(sp, Priority.ALWAYS);
 			sp.setContent(imagePanel);
 			sp.setPannable(true);
-			// TODO: this doesn't work
-			sp.setStyle(".scroll-bar { -fx-pref-width: 24px;}");
 		}
 
 		// set correct panels for user
@@ -214,11 +234,11 @@ public class ImageManipulator extends Application
 		// allow user to undo this manipulation
 		undoStack.push(image);
 
-		undoButton.setDisable(undoStack.size() == 1);
+		undoButton.setDisable(undoStack.size() <= 1);
 		redoButton.setDisable(redoStack.isEmpty());
 
 		// keep track of what image is currently displaying
-		setImageOnScreen(image);
+		imageOnScreen = image;
 	}
 
 
@@ -288,9 +308,11 @@ public class ImageManipulator extends Application
 	 * @param imageToWrite
 	 *            the image to invoke the method on
 	 */
-	private static void invokeWithValue(Number newValue, Method manipulation, MyImage imageToWrite)
+	private static void invokeWithValue(Number sliderValue, Number comboValue, Method manipulation,
+			MyImage imageToWrite)
 	{
-		if (newValue.doubleValue() % 1 != 0)
+		// prevents excessive calls to manipulation functions
+		if (sliderValue.doubleValue() % 1 != 0)
 		{
 			return;
 		}
@@ -303,22 +325,35 @@ public class ImageManipulator extends Application
 			copy = new MyImage(imageOnScreen);
 			boolean useCopy = imageOnScreen != imageToWrite;
 
-			manipulation.invoke(useCopy ? copy : imageToWrite, newValue.intValue());
+			if (comboValue != null)
+			{
+				manipulation.invoke(useCopy ? copy : imageToWrite, sliderValue.intValue(),
+						comboValue.intValue());
+			}
+			else
+			{
+				manipulation.invoke(useCopy ? copy : imageToWrite, sliderValue.intValue());
+			}
 			redoStack.clear();
 
 			// shows the image after manipulation without calling showImage,
 			// which has side effects we don't want until the user clicks "OK"
 			imagePanel.getChildren().set(0, new ImageView(useCopy ? copy : imageToWrite));
 
-			sliderBox.getOkButton().setVisible(true);
 			sliderBox.getOkButton().setOnAction((e) -> showImage(useCopy ? copy : imageToWrite));
 
 		}
 		catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
 		{
 			LOGGER.log(Level.SEVERE, "Problem executing method " + manipulation.getName()
-					+ "with argument " + newValue, e);
+					+ "with arguments " + sliderValue + " and " + comboValue, e);
 		}
+	}
+
+
+	public static String capitalize(String s)
+	{
+		return (s.substring(0, 1).toUpperCase() + s.substring(1)).replaceAll("_", " ");
 	}
 
 

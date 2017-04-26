@@ -55,6 +55,9 @@ public class ControlPanel extends VBox
 	 */
 	private String capitalize(String s)
 	{
-		return (s.substring(0, 1).toUpperCase() + s.substring(1)).replaceAll("_", " ");
+		return ImageManipulator.capitalize(s);// (s.substring(0,
+												// 1).toUpperCase() +
+												// s.substring(1)).replaceAll("_",
+												// " ");
 	}
 }

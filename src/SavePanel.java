@@ -33,10 +33,7 @@ public class SavePanel extends VBox
 		hbox.setSpacing(15);
 		hbox.setAlignment(Pos.CENTER);
 
-		undoButton = new Button("Undo");
 		undoButton.setOnAction((event) -> ImageManipulator.undo());
-
-		redoButton = new Button("Redo");
 		redoButton.setOnAction((event) -> ImageManipulator.redo());
 
 		Button saveButton = new Button("Save image");
@@ -59,7 +56,8 @@ public class SavePanel extends VBox
 	 */
 	private void saveImage()
 	{
-		BufferedImage outputImage = SwingFXUtils.fromFXImage(ImageManipulator.getImageOnScreen(), null);
+		BufferedImage outputImage = SwingFXUtils.fromFXImage(ImageManipulator.getImageOnScreen(),
+				null);
 		FileChooser chooser = new FileChooser();
 		chooser.getExtensionFilters().add(
 				new FileChooser.ExtensionFilter("Images", "*.jpg", "*.jpeg", "*.png", "*.bmp"));

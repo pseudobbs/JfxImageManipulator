@@ -167,12 +167,9 @@ public class MyImage extends WritableImage
 	}
 
 
-	// TODO: think of a way to allow the user to also choose the number of
-	// colors while still using reflection
-	public void reduce_colors(int numPasses)
+	public void reduce_colors(int numPasses, int colorCount)
 	{
-		int colorCount = 3;
-
+		// int colorCount = 3;
 		List<Color> finalColors = new ArrayList<Color>();
 
 		// start with 3 random colors
