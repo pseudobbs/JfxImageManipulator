@@ -147,21 +147,34 @@ public class ImageManipulator extends Application
 		Parameter[] parameters = manipulation.getParameters();
 
 		// if we need a parameter, present a slider for the user to input
+		// if there are 2, present a dropdown as well
 		if (parameters.length == 2)
 		{
-			// listen for user input
-			sliderBox.getComboBox().setVisible(true);
+			if (manipulation.getName().equals("reduce_colors"))
+			{
+				sliderBox.setCurrentComboBox(sliderBox.getReduceColorsBox());
+				sliderBox.getReduceColorsBox().setVisible(true);
+				border.setBottom(sliderBox);
+			}
+			else if (manipulation.getName().equals("blur"))
+			{
+				sliderBox.setCurrentComboBox(sliderBox.getBlurBox());
+				sliderBox.getBlurBox().setVisible(true);
+				border.setBottom(sliderBox);
+			}
 
 			sliderBox.getOkButton().setText(capitalize(manipulation.getName()));
 
-			sliderBox.getComboBox().valueProperty().addListener((ov, old, newV) -> invokeWithValue(
+			sliderBox.getReduceColorsBox().valueProperty().addListener(
+					(ov, old, newV) -> invokeWithValue(sliderBox.getSlider().getValue(), newV,
+							manipulation, imageToWrite));
+
+			sliderBox.getBlurBox().valueProperty().addListener((ov, old, newV) -> invokeWithValue(
 					sliderBox.getSlider().getValue(), newV, manipulation, imageToWrite));
 
 			sliderBox.getSlider().valueProperty()
 					.addListener((ov, old, newV) -> invokeWithValue(newV,
-							sliderBox.getComboBox().getValue(), manipulation, imageToWrite));
-
-			border.setBottom(sliderBox);
+							sliderBox.getReduceColorsBox().getValue(), manipulation, imageToWrite));
 		}
 		else if (parameters.length != 0)
 		{
@@ -169,9 +182,9 @@ public class ImageManipulator extends Application
 
 			// listen for user inputs
 			sliderBox.getSlider().valueProperty().addListener(
-					(ov, old, newV) -> invokeWithValue(newV, null, manipulation, imageToWrite));
+					(ov, old, newV) -> invokeWithValue(newV, -1, manipulation, imageToWrite));
 
-			sliderBox.getComboBox().setVisible(false);
+			sliderBox.getReduceColorsBox().setVisible(false);
 
 			border.setBottom(sliderBox);
 		}
@@ -325,7 +338,7 @@ public class ImageManipulator extends Application
 			copy = new MyImage(imageOnScreen);
 			boolean useCopy = imageOnScreen != imageToWrite;
 
-			if (comboValue != null)
+			if (comboValue.intValue() != -1)
 			{
 				manipulation.invoke(useCopy ? copy : imageToWrite, sliderValue.intValue(),
 						comboValue.intValue());
@@ -348,6 +361,30 @@ public class ImageManipulator extends Application
 			LOGGER.log(Level.SEVERE, "Problem executing method " + manipulation.getName()
 					+ "with arguments " + sliderValue + " and " + comboValue, e);
 		}
+	}
+
+
+	private static void invokeWithValue(Number sliderValue, String comboValue, Method manipulation,
+			MyImage imageToWrite)
+	{
+		Number val = 0;
+
+		switch (comboValue) {
+		case "Box blur":
+			val = 1;
+			break;
+		case "Gaussian blur (3x3)":
+			val = 2;
+			break;
+		case "Gaussian blur (5x5)":
+			val = 3;
+			break;
+		default:
+			val = 0;
+			break;
+		}
+
+		invokeWithValue(sliderValue, val, manipulation, imageToWrite);
 	}
 
 

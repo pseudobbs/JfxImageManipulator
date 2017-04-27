@@ -110,13 +110,64 @@ public class MyImage extends WritableImage
 	}
 
 
-	public void blur(int w)
+	// TODO: different types of blurs don't work b/c of ints (need floats)
+	public void blur(int w, int blurType)
 	{
 		float[][] blurKernel = new float[2 * w + 1][2 * w + 1];
 
-		for (float[] row : blurKernel)
-		{
-			Arrays.fill(row, 1.0f);
+		switch (blurType) {
+		case 1:
+			for (float[] row : blurKernel)
+			{
+				Arrays.fill(row, 1.0f);
+			}
+			break;
+		case 2:
+			blurKernel[0][0] = 1;
+			blurKernel[0][1] = 2;
+			blurKernel[0][2] = 1;
+
+			blurKernel[1][0] = 2;
+			blurKernel[1][1] = 4;
+			blurKernel[1][2] = 2;
+
+			blurKernel[2][0] = 1;
+			blurKernel[2][1] = 2;
+			blurKernel[2][2] = 1;
+			break;
+		case 3:
+			w = 2;
+			blurKernel = new float[2 * w + 1][2 * w + 1];
+
+			blurKernel[0][0] = 1;
+			blurKernel[0][1] = 4;
+			blurKernel[0][2] = 6;
+			blurKernel[0][3] = 4;
+			blurKernel[0][4] = 1;
+
+			blurKernel[1][0] = 4;
+			blurKernel[1][1] = 16;
+			blurKernel[1][2] = 24;
+			blurKernel[1][3] = 16;
+			blurKernel[1][4] = 4;
+
+			blurKernel[2][0] = 6;
+			blurKernel[2][1] = 24;
+			blurKernel[2][2] = 36;
+			blurKernel[2][3] = 24;
+			blurKernel[2][4] = 6;
+
+			blurKernel[3][0] = 4;
+			blurKernel[3][1] = 16;
+			blurKernel[3][2] = 24;
+			blurKernel[3][3] = 16;
+			blurKernel[3][4] = 4;
+
+			blurKernel[4][0] = 1;
+			blurKernel[4][1] = 4;
+			blurKernel[4][2] = 6;
+			blurKernel[4][3] = 4;
+			blurKernel[4][4] = 1;
 		}
 
 		this.applyKernel(blurKernel, w);

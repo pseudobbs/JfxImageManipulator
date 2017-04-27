@@ -7,7 +7,7 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
 
 /**
- * Uses reflection to find the public methods of the MyImage class, then Creates
+ * Uses reflection to find the public methods of the MyImage class, then creates
  * a button for each method so the user can access it.
  * 
  * @author Shawn
@@ -55,9 +55,6 @@ public class ControlPanel extends VBox
 	 */
 	private String capitalize(String s)
 	{
-		return ImageManipulator.capitalize(s);// (s.substring(0,
-												// 1).toUpperCase() +
-												// s.substring(1)).replaceAll("_",
-												// " ");
+		return ImageManipulator.capitalize(s);
 	}
 }
