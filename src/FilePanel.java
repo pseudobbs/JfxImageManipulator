@@ -47,14 +47,12 @@ public class FilePanel extends VBox
 			// remove extension from filename and save to variable
 			uploadedFileName = selectedFile.getName().replaceAll("\\.\\w{3,4}$", "");
 			selectedImage = new Image(new FileInputStream(selectedFile));
+			ImageManipulator.processUploadedImage();
 		}
 		catch (FileNotFoundException | NullPointerException e)
 		{
-			// TODO: add pop-up file selection cancelled
 			LOGGER.log(Level.INFO, "User cancelled file selection");
 		}
-
-		ImageManipulator.processUploadedImage();
 	}
 
 

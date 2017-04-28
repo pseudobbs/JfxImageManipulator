@@ -20,7 +20,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-// TODO: drag and drop images to load
+// TODO: not pressing OK button on slider images, then going to another slider image, should remove the preview image
 public class ImageManipulator extends Application
 {
 	private static final Logger LOGGER = Logger.getLogger(ImageManipulator.class.getName());
@@ -50,6 +50,7 @@ public class ImageManipulator extends Application
 	private static SavePanel savePanel = new SavePanel(undoButton, redoButton);
 	private static TitleBar titleBar = new TitleBar();
 	private static ImageSliderBox sliderBox = new ImageSliderBox(10);
+	private static ImageView imageView; // member of imagePanel
 
 
 	public static void main(String[] args)
@@ -74,7 +75,6 @@ public class ImageManipulator extends Application
 		// add elements to window
 		root = new FlowPane();
 		scene = new Scene(root, 400, 300);
-		// scene.getStylesheets().add(ImageManipulator.class.getResource("im.css").toExternalForm());
 		root.getChildren().add(border);
 
 		// force BorderPane to fit window size
@@ -129,7 +129,6 @@ public class ImageManipulator extends Application
 		}
 
 		showImage(uploadedImage);
-
 	}
 
 
@@ -150,41 +149,67 @@ public class ImageManipulator extends Application
 		// if there are 2, present a dropdown as well
 		if (parameters.length == 2)
 		{
+			// make OK button show the name of what is being OK'd
+			sliderBox.getOkButton().setText(capitalize(manipulation.getName()));
+
+			// set listener for reduce colors dropdown
+			sliderBox.getReduceColorsBox().valueProperty()
+					.addListener((ov, old, newV) -> invokeWithValue(
+							sliderBox.getIntensitySlider().getValue(), newV, manipulation,
+							imageToWrite));
+
+			// set listener for blur dropdown
+			sliderBox.getBlurBox().valueProperty()
+					.addListener((ov, old, newV) -> invokeWithValue(
+							sliderBox.getIntensitySlider().getValue(), newV, manipulation,
+							imageToWrite));
+
 			if (manipulation.getName().equals("reduce_colors"))
 			{
+				// set listener for slider
+				sliderBox.getIntensitySlider().valueProperty()
+						.addListener((ov, old, newV) -> invokeWithValue(newV,
+								sliderBox.getReduceColorsBox().getValue(), manipulation,
+								imageToWrite));
+
 				sliderBox.setCurrentComboBox(sliderBox.getReduceColorsBox());
 				sliderBox.getReduceColorsBox().setVisible(true);
 				border.setBottom(sliderBox);
 			}
 			else if (manipulation.getName().equals("blur"))
 			{
+				// set listener for slider
+				sliderBox.getIntensitySlider().valueProperty()
+						.addListener((ov, old, newV) -> invokeWithValue(newV,
+								sliderBox.getBlurBox().getValue(), manipulation, imageToWrite));
+
 				sliderBox.setCurrentComboBox(sliderBox.getBlurBox());
 				sliderBox.getBlurBox().setVisible(true);
 				border.setBottom(sliderBox);
 			}
-
-			sliderBox.getOkButton().setText(capitalize(manipulation.getName()));
-
-			sliderBox.getReduceColorsBox().valueProperty().addListener(
-					(ov, old, newV) -> invokeWithValue(sliderBox.getSlider().getValue(), newV,
-							manipulation, imageToWrite));
-
-			sliderBox.getBlurBox().valueProperty().addListener((ov, old, newV) -> invokeWithValue(
-					sliderBox.getSlider().getValue(), newV, manipulation, imageToWrite));
-
-			sliderBox.getSlider().valueProperty()
-					.addListener((ov, old, newV) -> invokeWithValue(newV,
-							sliderBox.getReduceColorsBox().getValue(), manipulation, imageToWrite));
 		}
 		else if (parameters.length != 0)
 		{
 			sliderBox.getOkButton().setText(capitalize(manipulation.getName()));
 
 			// listen for user inputs
-			sliderBox.getSlider().valueProperty().addListener(
-					(ov, old, newV) -> invokeWithValue(newV, -1, manipulation, imageToWrite));
+			if ("rotate".equals(manipulation.getName()))
+			{
+				sliderBox.getRotationSlider().valueProperty().addListener(
+						(ov, old, newV) -> invokeWithValue(newV, -1, manipulation, imageToWrite));
+
+				sliderBox.setCurrentSlider(sliderBox.getRotationSlider());
+			}
+			else
+			{
+				sliderBox.getIntensitySlider().valueProperty().addListener(
+						(ov, old, newV) -> invokeWithValue(newV, -1, manipulation, imageToWrite));
+
+				sliderBox.setCurrentSlider(sliderBox.getIntensitySlider());
+			}
 
 			sliderBox.getReduceColorsBox().setVisible(false);
+			sliderBox.getBlurBox().setVisible(false);
 
 			border.setBottom(sliderBox);
 		}
@@ -217,7 +242,7 @@ public class ImageManipulator extends Application
 		// if image is very large, use scroll bars
 		boolean useScrollPane = image.getHeight() * image.getWidth() >= 640_000;
 		ScrollPane sp = null;
-		ImageView imageView = new ImageView(image);
+		imageView = new ImageView(image);
 
 		// fit height of 0 means set the dimensions to match the image contained
 		imageView.setFitHeight(0);
@@ -373,10 +398,10 @@ public class ImageManipulator extends Application
 		case "Box blur":
 			val = 1;
 			break;
-		case "Gaussian blur (3x3)":
+		case "Gaussian Blur (3x3)":
 			val = 2;
 			break;
-		case "Gaussian blur (5x5)":
+		case "Gaussian Blur (5x5)":
 			val = 3;
 			break;
 		default:
@@ -464,5 +489,14 @@ public class ImageManipulator extends Application
 	public static String getUploadedFileName()
 	{
 		return uploadedFileName;
+	}
+
+
+	/**
+	 * @return the ImagePanel's imageView
+	 */
+	public static ImageView getImageView()
+	{
+		return imageView;
 	}
 }

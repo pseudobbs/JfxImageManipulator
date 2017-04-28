@@ -110,7 +110,7 @@ public class MyImage extends WritableImage
 	}
 
 
-	// TODO: different types of blurs don't work b/c of ints (need floats)
+	// TODO: gaussian blurs aren't working correctly
 	public void blur(int w, int blurType)
 	{
 		float[][] blurKernel = new float[2 * w + 1][2 * w + 1];
@@ -134,6 +134,14 @@ public class MyImage extends WritableImage
 			blurKernel[2][0] = 1;
 			blurKernel[2][1] = 2;
 			blurKernel[2][2] = 1;
+
+			for (int i = 0; i < blurKernel.length; i++)
+			{
+				for (int j = 0; j < blurKernel[1].length; j++)
+				{
+					blurKernel[i][j] *= 1.0f / 16.0f;
+				}
+			}
 			break;
 		case 3:
 			w = 2;
@@ -168,6 +176,14 @@ public class MyImage extends WritableImage
 			blurKernel[4][2] = 6;
 			blurKernel[4][3] = 4;
 			blurKernel[4][4] = 1;
+
+			for (int i = 0; i < blurKernel.length; i++)
+			{
+				for (int j = 0; j < blurKernel[1].length; j++)
+				{
+					blurKernel[i][j] *= 1.0f / 256.0f;
+				}
+			}
 		}
 
 		this.applyKernel(blurKernel, w);
@@ -234,7 +250,6 @@ public class MyImage extends WritableImage
 		// it in the list of colors at each index in groupVotes. For example,
 		// groupVotes[1] will contain a color entry for each pixel in the image
 		// whose color was closest to the first of our 3 colors.
-		// TODO: should this be broken into more methods?
 		for (int pass = 0; pass < numPasses; pass++)
 		{
 			List<List<Color>> groupVotes = new ArrayList<List<Color>>();
@@ -337,6 +352,13 @@ public class MyImage extends WritableImage
 				PIXEL_WRITER.setColor(x, y, closestColor);
 			}
 		}
+	}
+
+
+	// TODO: this isn't working
+	public void rotate(int degrees)
+	{
+		ImageManipulator.getImageView().setRotate(degrees);
 	}
 
 

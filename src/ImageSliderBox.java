@@ -3,6 +3,7 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -12,26 +13,20 @@ public class ImageSliderBox extends VBox
 {
 	private HBox sliderRow;
 	private VBox controlBox;
-	private Slider slider = new Slider(1, 4, 1);
+	private Slider intensitySlider;
+	private Slider rotationSlider = new Slider(0, 360, 0);
 	private Button okButton = new Button("OK");
 	private ComboBox<Integer> reduceColorsBox;
 	private ComboBox<String> blurBox;
 
 
-	// TODO: add labels to controls
 	public ImageSliderBox(double spacing)
 	{
 		super(spacing);
 		this.setAlignment(Pos.CENTER);
 
-		slider.setMajorTickUnit(1);
-		slider.setMinorTickCount(0);
-		slider.setShowTickLabels(true);
-		slider.setShowTickMarks(true);
-		slider.setSnapToTicks(true);
-		slider.setPrefWidth(200);
-		slider.setMaxWidth(200);
-		slider.setId("image_slider");
+		intensitySlider = makeIntensitySlider();
+		rotationSlider = makeRotationSlider();
 
 		ObservableList<Integer> options = FXCollections.observableArrayList(1, 2, 3, 4, 5, 6, 7);
 		reduceColorsBox = new ComboBox<Integer>(options);
@@ -44,9 +39,15 @@ public class ImageSliderBox extends VBox
 		blurBox.setVisible(false);
 		blurBox.valueProperty().set("Box blur");
 
+		Label intensityLabel = new Label("Intensity");
+		intensityLabel.setAlignment(Pos.CENTER_RIGHT);
+
+		VBox sliderCol = new VBox(5);
+		sliderCol.getChildren().addAll(intensitySlider, intensityLabel);
+
 		sliderRow = new HBox(5);
 		sliderRow.setAlignment(Pos.CENTER);
-		sliderRow.getChildren().add(slider);
+		sliderRow.getChildren().add(sliderCol);
 
 		controlBox = new VBox(5);
 		controlBox.setAlignment(Pos.CENTER);
@@ -56,9 +57,49 @@ public class ImageSliderBox extends VBox
 	}
 
 
-	public Slider getSlider()
+	private Slider makeIntensitySlider()
 	{
-		return this.slider;
+		this.intensitySlider = new Slider(1, 4, 1);
+
+		this.intensitySlider.setMajorTickUnit(1);
+		this.intensitySlider.setMinorTickCount(0);
+		this.intensitySlider.setShowTickLabels(true);
+		this.intensitySlider.setShowTickMarks(true);
+		this.intensitySlider.setSnapToTicks(true);
+		this.intensitySlider.setPrefWidth(200);
+		this.intensitySlider.setMaxWidth(200);
+		this.intensitySlider.setId("image_slider");
+
+		return intensitySlider;
+	}
+
+
+	private Slider makeRotationSlider()
+	{
+		this.rotationSlider = new Slider(0, 360, 0);
+
+		this.rotationSlider.setMajorTickUnit(30);
+		this.rotationSlider.setMinorTickCount(0);
+		this.rotationSlider.setShowTickLabels(true);
+		this.rotationSlider.setShowTickMarks(true);
+		this.rotationSlider.setSnapToTicks(true);
+		this.rotationSlider.setPrefWidth(200);
+		this.rotationSlider.setMaxWidth(200);
+		this.rotationSlider.setId("rotation_slider");
+
+		return rotationSlider;
+	}
+
+
+	public Slider getIntensitySlider()
+	{
+		return this.intensitySlider;
+	}
+
+
+	public Slider getRotationSlider()
+	{
+		return this.rotationSlider;
 	}
 
 
@@ -105,5 +146,13 @@ public class ImageSliderBox extends VBox
 		}
 
 		this.sliderRow.getChildren().add(comboBox);
+	}
+
+
+	// TODO: could check if current slider is the one passed in
+	public void setCurrentSlider(Slider slider)
+	{
+		this.sliderRow.getChildren().remove(0);
+		this.sliderRow.getChildren().add(0, slider);
 	}
 }
