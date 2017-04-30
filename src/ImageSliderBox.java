@@ -149,7 +149,6 @@ public class ImageSliderBox extends VBox
 	}
 
 
-	// TODO: could check if current slider is the one passed in
 	public void setCurrentSlider(Slider slider)
 	{
 		this.sliderRow.getChildren().remove(0);

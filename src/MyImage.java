@@ -8,7 +8,6 @@ import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 
-// TODO: possible methods: enlarge, shrink, rotate, flip
 public class MyImage extends WritableImage
 {
 	private final PixelReader PIXEL_READER = this.getPixelReader();
@@ -110,7 +109,7 @@ public class MyImage extends WritableImage
 	}
 
 
-	// TODO: gaussian blurs aren't working correctly
+	// TODO: gaussian blurs do not change with the slider (should they?)
 	public void blur(int w, int blurType)
 	{
 		float[][] blurKernel = new float[2 * w + 1][2 * w + 1];
@@ -355,10 +354,10 @@ public class MyImage extends WritableImage
 	}
 
 
-	// TODO: this isn't working
 	public void rotate(int degrees)
 	{
-		ImageManipulator.getImageView().setRotate(degrees);
+		ImageManipulator.getImagePanel().setRotate(degrees);
+		ImageManipulator.setCurrentRotation(degrees);
 	}
 
 

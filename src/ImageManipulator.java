@@ -20,7 +20,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-// TODO: not pressing OK button on slider images, then going to another slider image, should remove the preview image
+// TODO: in some cases the redo button becomes erroneously enabled
 public class ImageManipulator extends Application
 {
 	private static final Logger LOGGER = Logger.getLogger(ImageManipulator.class.getName());
@@ -30,6 +30,7 @@ public class ImageManipulator extends Application
 	private static MyImage copy = null;
 	private static String uploadedFileName = null;
 	private static Image imageOnScreen = null;
+	private static int currentRotation = 0;
 
 	// for undo/redo
 	private static Stack<Image> undoStack = new Stack<>();
@@ -119,7 +120,6 @@ public class ImageManipulator extends Application
 			resize(uploadedImage.getWidth(), uploadedImage.getHeight());
 		}
 
-		// TODO: if the processing message ever works, probably won't need this
 		if (uploadedImage.getWidth() * uploadedImage.getHeight() >= 1_000_000)
 		{
 			Alert alert = new Alert(AlertType.WARNING,
@@ -145,13 +145,22 @@ public class ImageManipulator extends Application
 		MyImage imageToWrite = new MyImage(imageOnScreen);
 		Parameter[] parameters = manipulation.getParameters();
 
+		// make OK button show the name of what is being OK'd
+		sliderBox.getOkButton().setText(capitalize(manipulation.getName()));
+		sliderBox.getOkButton().setVisible(true);
+
+		// if the user manipulates the image with the slider, but doesn't save
+		// the change, this ensures that the unsaved changes are discarded when
+		// choosing a new manipulation
+		imagePanel.getChildren().set(0, new ImageView(imageOnScreen));
+
+		// default- rotation slider called when needed
+		sliderBox.setCurrentSlider(sliderBox.getIntensitySlider());
+
 		// if we need a parameter, present a slider for the user to input
 		// if there are 2, present a dropdown as well
 		if (parameters.length == 2)
 		{
-			// make OK button show the name of what is being OK'd
-			sliderBox.getOkButton().setText(capitalize(manipulation.getName()));
-
 			// set listener for reduce colors dropdown
 			sliderBox.getReduceColorsBox().valueProperty()
 					.addListener((ov, old, newV) -> invokeWithValue(
@@ -164,7 +173,7 @@ public class ImageManipulator extends Application
 							sliderBox.getIntensitySlider().getValue(), newV, manipulation,
 							imageToWrite));
 
-			if (manipulation.getName().equals("reduce_colors"))
+			if ("reduce_colors".equals(manipulation.getName()))
 			{
 				// set listener for slider
 				sliderBox.getIntensitySlider().valueProperty()
@@ -176,7 +185,7 @@ public class ImageManipulator extends Application
 				sliderBox.getReduceColorsBox().setVisible(true);
 				border.setBottom(sliderBox);
 			}
-			else if (manipulation.getName().equals("blur"))
+			else if ("blur".equals(manipulation.getName()))
 			{
 				// set listener for slider
 				sliderBox.getIntensitySlider().valueProperty()
@@ -198,6 +207,9 @@ public class ImageManipulator extends Application
 				sliderBox.getRotationSlider().valueProperty().addListener(
 						(ov, old, newV) -> invokeWithValue(newV, -1, manipulation, imageToWrite));
 
+				// rotations are easier to deal with w/o the OK button
+				sliderBox.getOkButton().setVisible(false);
+
 				sliderBox.setCurrentSlider(sliderBox.getRotationSlider());
 			}
 			else
@@ -217,6 +229,7 @@ public class ImageManipulator extends Application
 		{
 			try
 			{
+				border.setBottom(null);
 				manipulation.invoke(imageToWrite);
 				redoStack.clear();
 				showImage(imageToWrite);
@@ -236,9 +249,10 @@ public class ImageManipulator extends Application
 	 * @param image
 	 *            the image to display
 	 */
-	// TODO: slider operations on huge images take way too long
 	static void showImage(Image image)
 	{
+		imagePanel.setRotate(currentRotation);
+
 		// if image is very large, use scroll bars
 		boolean useScrollPane = image.getHeight() * image.getWidth() >= 640_000;
 		ScrollPane sp = null;
@@ -268,6 +282,7 @@ public class ImageManipulator extends Application
 		border.setCenter(useScrollPane ? sp : imagePanel);
 		border.setLeft(controlPanel);
 		border.setRight(savePanel);
+		border.setBottom(null);
 
 		// allow user to undo this manipulation
 		undoStack.push(image);
@@ -413,6 +428,13 @@ public class ImageManipulator extends Application
 	}
 
 
+	/**
+	 * Capitalizes a string and replaces underscores with spaces
+	 * 
+	 * @param s
+	 *            the string to capitalize
+	 * @return the new string
+	 */
 	public static String capitalize(String s)
 	{
 		return (s.substring(0, 1).toUpperCase() + s.substring(1)).replaceAll("_", " ");
@@ -495,8 +517,29 @@ public class ImageManipulator extends Application
 	/**
 	 * @return the ImagePanel's imageView
 	 */
-	public static ImageView getImageView()
+	public static ImagePanel getImagePanel()
 	{
-		return imageView;
+		return imagePanel;
+	}
+
+
+	/**
+	 * @return the ImagePanel's current rotation
+	 */
+	public static int getCurrentRotation()
+	{
+		return currentRotation;
+	}
+
+
+	/**
+	 * set the ImagePanel's current rotation value so it can be read
+	 * 
+	 * @param cr
+	 *            the current rotation to set
+	 */
+	public static void setCurrentRotation(int cr)
+	{
+		currentRotation = cr;
 	}
 }
