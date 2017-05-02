@@ -542,4 +542,16 @@ public class ImageManipulator extends Application
 	{
 		currentRotation = cr;
 	}
+
+
+	public static void setUploadedFileName(String fn)
+	{
+		uploadedFileName = fn;
+	}
+
+
+	public static void setUploadedImage(Image image)
+	{
+		uploadedImage = image;
+	}
 }

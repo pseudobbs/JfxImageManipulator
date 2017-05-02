@@ -95,6 +95,8 @@ public class SavePanel extends VBox
 	private void discard()
 	{
 		ImageManipulator.setImageOnScreen(null);
+		ImageManipulator.setUploadedImage(null);
+		ImageManipulator.setUploadedFileName(null);
 		ImageManipulator.getBorder().setLeft(null);
 		ImageManipulator.getBorder().setCenter(ImageManipulator.getFilePanel());
 		ImageManipulator.getBorder().setRight(null);
